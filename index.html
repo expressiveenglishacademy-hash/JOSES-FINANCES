@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance App Pro MAX</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box;}
+body { margin:0; font-family:Arial; background:#0f172a; color:#fff; display:flex; height:100vh; }
+
+.sidebar { width:220px; background:#020617; padding:20px; display:flex; flex-direction:column; }
+.sidebar h2 { color:#38bdf8; margin-bottom:20px; }
+.sidebar button { width:100%; margin:10px 0; }
+
+.main { flex:1; padding:20px; overflow-y:auto; }
+
+/* 🔥 TOP CARDS */
+.top-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:15px; margin-bottom:15px; }
+.top-card { background:#1e293b; padding:15px; border-radius:12px; }
+
+.card { background:#1e293b; padding:15px; border-radius:12px; margin-bottom:15px; }
+
+input, select, button { padding:10px; border-radius:8px; border:none; margin:5px 0; width:100%; }
+button { background:#38bdf8; color:#000; font-weight:bold; cursor:pointer; }
+
+.hidden { display:none; }
+.bar { height:10px; background:#334155; border-radius:6px; overflow:hidden; margin-bottom:10px; }
+.bar span { display:block; height:100%; background:#38bdf8; }
+
+.alert { color:#f87171; }
+.good { color:#4ade80; }
+
+#login { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:#1e293b; padding:30px; border-radius:12px; }
+#app { display:flex; width:100%; height:100vh; }
+
+/* 📱 MOBILE */
+@media(max-width:768px){
+ body{flex-direction:column;}
+ .sidebar{width:100%; flex-direction:row; justify-content:space-around;}
+ .main{padding:10px;}
+}
+</style>
+</head>
+<body>
+
+<div id="login">
+<h2>Enter PIN</h2>
+<input type="password" id="pin">
+<button onclick="loginUser()">Login</button>
+</div>
+
+<div id="app" class="hidden">
+<div class="sidebar">
+<h2>Finance</h2>
+<button onclick="showTab('dashboard')">Dashboard</button>
+<button onclick="showTab('goals')">Goals</button>
+<button onclick="showTab('reports')">Reports</button>
+</div>
+
+<div class="main">
+
+<div id="dashboard">
+
+<!-- 🔥 TOP SUMMARY -->
+<div class="top-cards">
+<div class="top-card"><h4>Income</h4><p id="incCard"></p></div>
+<div class="top-card"><h4>Expenses</h4><p id="expCard"></p></div>
+<div class="top-card"><h4>Savings</h4><p id="savCard"></p></div>
+</div>
+
+<div class="card">
+<h3>Add Income</h3>
+<input id="incomeName" placeholder="Source">
+<input id="incomeAmount" type="number">
+<button onclick="addIncome()">Add</button>
+</div>
+
+<div class="card">
+<h3>Add Expense</h3>
+<input id="expenseName" placeholder="Category">
+<select id="expenseCategory">
+<option>Home & Food</option>
+<option>Family</option>
+<option>Personal</option>
+<option>Other</option>
+</select>
+<input id="expenseAmount" type="number">
+<input id="expenseDate" type="date">
+<button onclick="addExpense()">Add</button>
+</div>
+
+<div class="card">
+<h3>Summary</h3>
+<p id="summary"></p>
+<p id="advisor"></p>
+</div>
+
+<div class="card">
+<h3>Budget</h3>
+Needs<div class="bar"><span id="needsBar"></span></div>
+Wants<div class="bar"><span id="wantsBar"></span></div>
+Savings<div class="bar"><span id="savingsBar"></span></div>
+</div>
+
+<div class="card"><canvas id="chart"></canvas></div>
+
+<div class="card">
+<h3>Reminders</h3>
+<ul id="reminders"></ul>
+</div>
+</div>
+
+<div id="goals" class="hidden">
+<div class="card">
+<h3>Add Goal</h3>
+<input id="goalName">
+<input id="goalAmount" type="number">
+<input id="goalDeadline" type="date">
+<button onclick="addGoal()">Add</button>
+</div>
+<ul id="goalList"></ul>
+</div>
+
+<div id="reports" class="hidden">
+<div class="card">
+<h3>Weekly Spending</h3>
+<p id="weekly"></p>
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+let data = JSON.parse(localStorage.getItem('financeData')) || {pin:null,incomes:[],expenses:[],goals:[]};
+let rate=36.5;
+let chart=null;
+
+function save(){localStorage.setItem('financeData',JSON.stringify(data));}
+
+function loginUser(){
+ const p = document.getElementById('pin').value;
+ if(!data.pin){ data.pin = p; save(); }
+ if(p === data.pin){
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').classList.remove('hidden');
+  render();
+ } else alert('Wrong PIN');
+}
+
+function showTab(t){['dashboard','goals','reports'].forEach(id=>document.getElementById(id).classList.add('hidden'));document.getElementById(t).classList.remove('hidden');}
+
+function addIncome(){
+ const name=document.getElementById('incomeName').value;
+ const amount=Number(document.getElementById('incomeAmount').value);
+ if(!name||!amount) return;
+ data.incomes.push({name,amount});
+ save(); render();
+}
+
+function addExpense(){
+ const name=document.getElementById('expenseName').value;
+ const category=document.getElementById('expenseCategory').value;
+ const amount=Number(document.getElementById('expenseAmount').value);
+ const date=document.getElementById('expenseDate').value;
+ if(!name||!amount) return;
+ data.expenses.push({name,category,amount,date});
+ save(); render();
+}
+
+function addGoal(){
+ const name=document.getElementById('goalName').value;
+ const amount=Number(document.getElementById('goalAmount').value);
+ const deadline=document.getElementById('goalDeadline').value;
+ if(!name||!amount||!deadline) return;
+ data.goals.push({name,amount,deadline});
+ save(); render();
+}
+
+function render(){
+ const inc=data.incomes.reduce((a,b)=>a+b.amount,0);
+ const exp=data.expenses.reduce((a,b)=>a+b.amount,0);
+ const sav=inc-exp;
+
+ document.getElementById('incCard').innerText=`$${inc}`;
+ document.getElementById('expCard').innerText=`$${exp}`;
+ document.getElementById('savCard').innerText=`$${sav}`;
+
+ document.getElementById('summary').innerText=`Income $${inc} / C$${(inc*rate).toFixed(0)} | Expenses $${exp} | Save $${sav}`;
+
+ const percent=inc>0?(exp/inc)*100:0;
+ document.getElementById('advisor').innerHTML=percent>60?`<span class='alert'>Overspending (${percent.toFixed(0)}%)</span>`:`<span class='good'>Healthy (${percent.toFixed(0)}%)</span>`;
+
+ document.getElementById('needsBar').style.width=inc>0?(exp*0.5/inc*100)+'%':'0%';
+ document.getElementById('wantsBar').style.width=inc>0?(exp*0.3/inc*100)+'%':'0%';
+ document.getElementById('savingsBar').style.width=inc>0?(sav/inc*100)+'%':'0%';
+
+ const now=new Date();
+ const week=data.expenses.filter(e=>e.date&&((now-new Date(e.date))/(1000*60*60*24)<=7)).reduce((a,b)=>a+b.amount,0);
+ document.getElementById('weekly').innerText=`This week: $${week}`;
+
+ document.getElementById('reminders').innerHTML=data.expenses.map(e=>{
+  if(!e.date)return'';
+  const d=(new Date(e.date)-new Date())/(1000*60*60*24);
+  return d<5&&d>0?`<li class='alert'>${e.name} in ${Math.floor(d)} days</li>`:'';
+ }).join('');
+
+ document.getElementById('goalList').innerHTML=data.goals.map(g=>{
+  const m=(new Date(g.deadline)-new Date())/(1000*60*60*24*30);
+  if(m<=0) return `<li>${g.name}: Deadline passed</li>`;
+  const need=g.amount/m;
+  const status=sav>=need?"✅ On Track":"❌ Not enough";
+  return `<li>${g.name}: need $${need.toFixed(0)}/mo → ${status}</li>`;
+ }).join('');
+
+ const ctx=document.getElementById('chart').getContext('2d');
+ if(chart) chart.destroy();
+ chart=new Chart(ctx,{type:'pie',data:{labels:data.expenses.map(e=>e.category),datasets:[{data:data.expenses.map(e=>e.amount)}]}});
+}
+</script>
+
+</body>
+</html>
