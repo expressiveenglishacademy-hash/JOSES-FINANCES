@@ -1,0 +1,614 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>FinanceFlow | Expenses</title>
++  <link rel="preconnect" href="https://fonts.googleapis.com">
++  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
++  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
++  <style>
++    :root {
++      --bg-main: #020617;
++      --bg-alt: #0f172a;
++      --panel: rgba(15, 23, 42, 0.92);
++      --panel-strong: rgba(19, 32, 61, 0.95);
++      --border: rgba(148, 163, 184, 0.16);
++      --text: #e2e8f0;
++      --muted: #94a3b8;
++      --accent: #38bdf8;
++      --danger: #fb7185;
++      --shadow: 0 28px 80px rgba(2, 6, 23, 0.45);
++      --radius: 24px;
++    }
++
++    * {
++      box-sizing: border-box;
++    }
++
++    body {
++      margin: 0;
++      min-height: 100vh;
++      font-family: "Plus Jakarta Sans", sans-serif;
++      color: var(--text);
++      background:
++        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 30%),
++        radial-gradient(circle at top right, rgba(30, 41, 59, 0.65), transparent 34%),
++        linear-gradient(180deg, #0f172a 0%, #020617 100%);
++    }
++
++    a {
++      color: inherit;
++      text-decoration: none;
++    }
++
++    .container {
++      width: min(1200px, calc(100% - 32px));
++      margin: 0 auto;
++      padding: 28px 0 40px;
++    }
++
++    .topbar {
++      display: flex;
++      justify-content: space-between;
++      align-items: center;
++      gap: 18px;
++      margin-bottom: 24px;
++      flex-wrap: wrap;
++    }
++
++    .brand h1 {
++      margin: 0;
++      font-size: clamp(1.7rem, 4vw, 2.6rem);
++      font-weight: 800;
++      letter-spacing: -0.04em;
++    }
++
++    .brand p {
++      margin: 8px 0 0;
++      color: var(--muted);
++      max-width: 620px;
++      line-height: 1.6;
++    }
++
++    .nav {
++      display: flex;
++      gap: 12px;
++      flex-wrap: wrap;
++    }
++
++    .nav a {
++      padding: 12px 18px;
++      border-radius: 999px;
++      border: 1px solid var(--border);
++      background: rgba(15, 23, 42, 0.72);
++      color: var(--muted);
++      font-weight: 600;
++      transition: 0.2s ease;
++    }
++
++    .nav a:hover,
++    .nav a.active {
++      color: #f8fafc;
++      border-color: rgba(56, 189, 248, 0.45);
++      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(15, 23, 42, 0.9));
++      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.16);
++    }
++
++    .hero {
++      display: grid;
++      grid-template-columns: 1.2fr auto;
++      gap: 18px;
++      align-items: center;
++      padding: 28px;
++      border-radius: var(--radius);
++      background: linear-gradient(135deg, rgba(251, 113, 133, 0.1), rgba(15, 23, 42, 0.92));
++      border: 1px solid rgba(251, 113, 133, 0.16);
++      box-shadow: var(--shadow);
++      margin-bottom: 24px;
++    }
++
++    .hero-tag {
++      display: inline-flex;
++      padding: 8px 12px;
++      border-radius: 999px;
++      background: rgba(56, 189, 248, 0.12);
++      border: 1px solid rgba(56, 189, 248, 0.2);
++      color: var(--accent);
++      font-size: 0.9rem;
++      font-weight: 700;
++      margin-bottom: 16px;
++    }
++
++    .hero h2 {
++      margin: 0;
++      font-size: clamp(1.6rem, 4vw, 2.4rem);
++      letter-spacing: -0.03em;
++    }
++
++    .hero p {
++      margin: 12px 0 0;
++      color: var(--muted);
++      line-height: 1.7;
++    }
++
++    .hero-total {
++      padding: 18px 22px;
++      min-width: 220px;
++      border-radius: 22px;
++      background: rgba(15, 23, 42, 0.78);
++      border: 1px solid rgba(251, 113, 133, 0.16);
++      text-align: right;
++    }
++
++    .hero-total span {
++      display: block;
++      color: var(--muted);
++      margin-bottom: 8px;
++    }
++
++    .hero-total strong {
++      font-size: clamp(1.8rem, 4vw, 2.6rem);
++      letter-spacing: -0.05em;
++    }
++
++    .layout {
++      display: grid;
++      grid-template-columns: 0.95fr 1.05fr;
++      gap: 18px;
++    }
++
++    .right-stack {
++      display: grid;
++      gap: 18px;
++    }
++
++    .card {
++      background: var(--panel);
++      border: 1px solid var(--border);
++      border-radius: var(--radius);
++      padding: 22px;
++      box-shadow: var(--shadow);
++      backdrop-filter: blur(10px);
++    }
++
++    .section-title {
++      margin: 0 0 18px;
++      font-size: 1.12rem;
++      letter-spacing: -0.02em;
++    }
++
++    .form-grid {
++      display: grid;
++      gap: 14px;
++    }
++
++    label {
++      display: grid;
++      gap: 8px;
++      color: var(--muted);
++      font-size: 0.95rem;
++    }
++
++    input,
++    select {
++      width: 100%;
++      padding: 14px 16px;
++      border-radius: 16px;
++      border: 1px solid rgba(148, 163, 184, 0.18);
++      background: rgba(15, 23, 42, 0.9);
++      color: var(--text);
++      outline: none;
++      font: inherit;
++      transition: border-color 0.2s ease, box-shadow 0.2s ease;
++    }
++
++    input:focus,
++    select:focus {
++      border-color: rgba(56, 189, 248, 0.55);
++      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
++    }
++
++    .button {
++      border: none;
++      border-radius: 16px;
++      padding: 14px 18px;
++      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
++      color: #02111f;
++      font: inherit;
++      font-weight: 800;
++      cursor: pointer;
++      transition: transform 0.2s ease, box-shadow 0.2s ease;
++    }
++
++    .button:hover {
++      transform: translateY(-1px);
++      box-shadow: 0 16px 30px rgba(56, 189, 248, 0.26);
++    }
++
++    .message {
++      min-height: 22px;
++      font-size: 0.92rem;
++      margin-top: 6px;
++    }
++
++    .message.error {
++      color: #fda4af;
++    }
++
++    .message.success {
++      color: #86efac;
++    }
++
++    .list {
++      display: grid;
++      gap: 12px;
++    }
++
++    .list-item {
++      display: flex;
++      justify-content: space-between;
++      gap: 16px;
++      padding: 16px 18px;
++      border-radius: 18px;
++      background: rgba(15, 23, 42, 0.78);
++      border: 1px solid rgba(148, 163, 184, 0.12);
++    }
++
++    .list-item strong {
++      display: block;
++      margin-bottom: 4px;
++      font-size: 0.98rem;
++    }
++
++    .list-item span {
++      color: var(--muted);
++      font-size: 0.9rem;
++    }
++
++    .empty-state {
++      padding: 18px;
++      border-radius: 18px;
++      background: rgba(15, 23, 42, 0.7);
++      border: 1px dashed rgba(148, 163, 184, 0.18);
++      color: var(--muted);
++      line-height: 1.6;
++    }
++
++    .category-chip {
++      display: inline-flex;
++      align-items: center;
++      padding: 8px 12px;
++      border-radius: 999px;
++      background: rgba(56, 189, 248, 0.1);
++      color: #bae6fd;
++      font-size: 0.85rem;
++      font-weight: 700;
++    }
++
++    .chart-wrap {
++      position: relative;
++      min-height: 320px;
++    }
++
++    .chart-empty {
++      display: none;
++      place-items: center;
++      min-height: 260px;
++      border-radius: 18px;
++      background: rgba(15, 23, 42, 0.7);
++      border: 1px dashed rgba(148, 163, 184, 0.18);
++      color: var(--muted);
++      text-align: center;
++      padding: 20px;
++      line-height: 1.6;
++    }
++
++    @media (max-width: 980px) {
++      .layout,
++      .hero {
++        grid-template-columns: 1fr;
++      }
++
++      .hero-total {
++        text-align: left;
++      }
++    }
++
++    @media (max-width: 640px) {
++      .container {
++        width: min(100% - 20px, 100%);
++        padding: 18px 0 28px;
++      }
++
++      .hero,
++      .card {
++        padding: 18px;
++        border-radius: 20px;
++      }
++
++      .nav {
++        width: 100%;
++      }
++
++      .nav a {
++        flex: 1 1 calc(50% - 8px);
++        text-align: center;
++      }
++    }
++  </style>
++</head>
++<body>
++  <div class="container">
++    <header class="topbar">
++      <div class="brand">
++        <h1>FinanceFlow</h1>
++        <p>Organize spending by category and visualize your expense breakdown with a live pie chart.</p>
++      </div>
++      <nav class="nav">
++        <a href="index.html">Dashboard</a>
++        <a href="income.html">Income</a>
++        <a class="active" href="expenses.html">Expenses</a>
++        <a href="savings.html">Savings</a>
++        <a href="goals.html">Goals</a>
++      </nav>
++    </header>
++
++    <section class="hero">
++      <div>
++        <div class="hero-tag">Expense tracker</div>
++        <h2>Track outgoing money across home, food, family, personal, and other spending categories.</h2>
++        <p>Every expense updates your savings automatically and feeds the pie chart summary below.</p>
++      </div>
++      <div class="hero-total">
++        <span>Total Expenses</span>
++        <strong id="hero-expense-total">$0.00</strong>
++      </div>
++    </section>
++
++    <section class="layout">
++      <article class="card">
++        <h3 class="section-title">Add Expense</h3>
++        <form id="expense-form" class="form-grid">
++          <label>
++            Expense Name
++            <input id="expense-name" type="text" placeholder="Groceries, rent, internet">
++          </label>
++          <label>
++            Category
++            <select id="expense-category">
++              <option value="Home & Food">Home & Food</option>
++              <option value="Family">Family</option>
++              <option value="Personal">Personal</option>
++              <option value="Other">Other</option>
++            </select>
++          </label>
++          <label>
++            Amount
++            <input id="expense-amount" type="number" min="0" step="0.01" placeholder="0.00">
++          </label>
++          <button class="button" type="submit">Save Expense</button>
++          <div id="expense-message" class="message"></div>
++        </form>
++      </article>
++
++      <div class="right-stack">
++        <article class="card">
++          <div style="display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 18px; flex-wrap: wrap;">
++            <h3 class="section-title" style="margin: 0;">Expense List</h3>
++            <div class="category-chip" id="expense-count">0 entries</div>
++          </div>
++          <div id="expense-list" class="list">
++            <div class="empty-state">No expenses added yet. Start tracking spending to see your chart and totals.</div>
++          </div>
++        </article>
++
++        <article class="card">
++          <h3 class="section-title">Category Breakdown</h3>
++          <div class="chart-wrap">
++            <canvas id="expense-chart"></canvas>
++            <div id="chart-empty" class="chart-empty">Add some expenses to generate the category pie chart.</div>
++          </div>
++        </article>
++      </div>
++    </section>
++  </div>
++
++  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
++  <script>
++    const STORAGE_KEY = "financeTrackerData";
++    let expenseChart = null;
++
++    function getData() {
++      const emptyData = { incomes: [], expenses: [], goals: [] };
++
++      try {
++        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
++
++        if (!parsed || typeof parsed !== "object") {
++          return emptyData;
++        }
++
++        return {
++          incomes: Array.isArray(parsed.incomes) ? parsed.incomes : [],
++          expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
++          goals: Array.isArray(parsed.goals) ? parsed.goals : []
++        };
++      } catch (error) {
++        return emptyData;
++      }
++    }
++
++    function saveData(data) {
++      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
++    }
++
++    function formatCurrency(value) {
++      return new Intl.NumberFormat("en-US", {
++        style: "currency",
++        currency: "USD"
++      }).format(Number(value) || 0);
++    }
++
++    function calculateTotals(data) {
++      const totalIncome = data.incomes.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
++      const totalExpenses = data.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
++      const totalSavings = totalIncome - totalExpenses;
++      const totalGoals = data.goals.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
++
++      return { totalIncome, totalExpenses, totalSavings, totalGoals };
++    }
++
++    function setMessage(elementId, text, type) {
++      const message = document.getElementById(elementId);
++
++      if (!message) {
++        return;
++      }
++
++      message.textContent = text;
++      message.className = `message ${type}`;
++    }
++
++    function addIncome(event) {
++      if (event) {
++        event.preventDefault();
++      }
++    }
++
++    function addExpense(event) {
++      if (event) {
++        event.preventDefault();
++      }
++
++      const nameInput = document.getElementById("expense-name");
++      const categoryInput = document.getElementById("expense-category");
++      const amountInput = document.getElementById("expense-amount");
++
++      const name = nameInput.value.trim();
++      const category = categoryInput.value;
++      const amount = Number(amountInput.value);
++
++      if (!name || !category || !Number.isFinite(amount) || amount <= 0) {
++        setMessage("expense-message", "Enter a valid expense, category, and amount greater than zero.", "error");
++        return;
++      }
++
++      const data = getData();
++      data.expenses.unshift({
++        name,
++        category,
++        amount,
++        createdAt: new Date().toISOString()
++      });
++
++      saveData(data);
++      document.getElementById("expense-form").reset();
++      setMessage("expense-message", "Expense saved successfully.", "success");
++      render();
++    }
++
++    function addGoal(event) {
++      if (event) {
++        event.preventDefault();
++      }
++    }
++
++    function renderExpenseChart(expenses) {
++      const canvas = document.getElementById("expense-chart");
++      const emptyState = document.getElementById("chart-empty");
++
++      if (!expenses.length) {
++        canvas.style.display = "none";
++        emptyState.style.display = "grid";
++
++        if (expenseChart) {
++          expenseChart.destroy();
++          expenseChart = null;
++        }
++
++        return;
++      }
++
++      canvas.style.display = "block";
++      emptyState.style.display = "none";
++
++      const grouped = expenses.reduce((accumulator, expense) => {
++        const category = expense.category || "Other";
++        accumulator[category] = (accumulator[category] || 0) + (Number(expense.amount) || 0);
++        return accumulator;
++      }, {});
++
++      const labels = Object.keys(grouped);
++      const values = Object.values(grouped);
++
++      if (expenseChart) {
++        expenseChart.destroy();
++      }
++
++      expenseChart = new Chart(canvas, {
++        type: "pie",
++        data: {
++          labels,
++          datasets: [
++            {
++              data: values,
++              backgroundColor: ["#38bdf8", "#fb7185", "#f59e0b", "#22c55e"],
++              borderColor: "#0f172a",
++              borderWidth: 4
++            }
++          ]
++        },
++        options: {
++          responsive: true,
++          maintainAspectRatio: false,
++          plugins: {
++            legend: {
++              position: "bottom",
++              labels: {
++                color: "#cbd5e1",
++                padding: 18,
++                font: {
++                  family: "Plus Jakarta Sans"
++                }
++              }
++            }
++          }
++        }
++      });
++    }
++
++    function render() {
++      const data = getData();
++      const { totalExpenses } = calculateTotals(data);
++      const expenseList = document.getElementById("expense-list");
++
++      document.getElementById("hero-expense-total").textContent = formatCurrency(totalExpenses);
++      document.getElementById("expense-count").textContent = `${data.expenses.length} ${data.expenses.length === 1 ? "entry" : "entries"}`;
++
++      if (!data.expenses.length) {
++        expenseList.innerHTML = '<div class="empty-state">No expenses added yet. Start tracking spending to see your chart and totals.</div>';
++      } else {
++        expenseList.innerHTML = data.expenses
++          .map((expense) => `
++            <div class="list-item">
++              <div>
++                <strong>${expense.name}</strong>
++                <span>${expense.category} • ${new Date(expense.createdAt).toLocaleDateString()}</span>
++              </div>
++              <strong>${formatCurrency(expense.amount)}</strong>
++            </div>
++          `)
++          .join("");
++      }
++
++      renderExpenseChart(data.expenses);
++    }
++
++    document.getElementById("expense-form").addEventListener("submit", addExpense);
++
++    saveData(getData());
++    render();
++  </script>
++</body>
++</html>
