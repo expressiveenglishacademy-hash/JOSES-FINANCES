@@ -36,15 +36,31 @@ function formatCurrency(value) {
   }).format(Number(value) || 0);
 }
 
-function formatDate(value) {
+function parseDateValue(value) {
   if (!value) {
-    return "Today";
+    return null;
   }
 
-  const date = new Date(value);
+  let parsed = null;
 
-  if (Number.isNaN(date.getTime())) {
-    return "Today";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    parsed = new Date(`${value}T00:00:00`);
+  } else {
+    parsed = new Date(value);
+  }
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function formatDate(value) {
+  const date = parseDateValue(value);
+
+  if (!date) {
+    return "No date";
   }
 
   return date.toLocaleDateString("en-US", {
@@ -52,6 +68,20 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric"
   });
+}
+
+function getDaysUntil(value) {
+  const target = parseDateValue(value);
+
+  if (!target) {
+    return null;
+  }
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const due = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+
+  return Math.ceil((due - today) / 86400000);
 }
 
 function escapeHtml(value) {
@@ -73,6 +103,26 @@ function calculateTotals(data) {
   const totalGoals = data.goals.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
   return { totalIncome, totalExpenses, totalSavings, totalGoals };
+}
+
+function calculateGoalPlan(goalAmount, availableNow, dueDate) {
+  const target = Number(goalAmount) || 0;
+  const available = Math.max(Number(availableNow) || 0, 0);
+  const remaining = Math.max(target - available, 0);
+  const daysLeft = getDaysUntil(dueDate);
+  const monthsLeft = daysLeft !== null && daysLeft > 0 ? Math.max(daysLeft / 30, 1) : null;
+  const monthlyNeeded = remaining === 0 ? 0 : monthsLeft ? remaining / monthsLeft : remaining;
+  const progress = target > 0 ? Math.min((available / target) * 100, 100) : 0;
+
+  return {
+    target,
+    available,
+    remaining,
+    daysLeft,
+    monthsLeft,
+    monthlyNeeded,
+    progress
+  };
 }
 
 function setMessage(id, text, type) {
@@ -164,16 +214,18 @@ function addGoal(event) {
 
   const nameInput = document.getElementById("goal-name");
   const amountInput = document.getElementById("goal-amount");
+  const dueDateInput = document.getElementById("goal-due-date");
 
-  if (!nameInput || !amountInput) {
+  if (!nameInput || !amountInput || !dueDateInput) {
     return;
   }
 
   const name = nameInput.value.trim();
   const amount = Number(amountInput.value);
+  const dueDate = dueDateInput.value;
 
-  if (!name || !Number.isFinite(amount) || amount <= 0) {
-    setMessage("goal-message", "Enter a valid goal name and amount greater than zero.", "error");
+  if (!name || !Number.isFinite(amount) || amount <= 0 || !dueDate) {
+    setMessage("goal-message", "Enter a valid goal name, amount greater than zero, and a due date.", "error");
     return;
   }
 
@@ -182,6 +234,7 @@ function addGoal(event) {
   data.goals.unshift({
     name,
     amount,
+    dueDate,
     createdAt: new Date().toISOString()
   });
 
@@ -481,37 +534,100 @@ function renderGoalsPage(data, totals) {
     return;
   }
 
-  const availableSavings = Math.max(totals.totalSavings, 0);
+  const availableNow = Math.max(totals.totalSavings, 0);
+  const availableEl = document.getElementById("goal-available-now");
+  const availableNote = document.getElementById("goal-available-note");
 
-  document.getElementById("goal-savings-total").textContent = formatCurrency(totals.totalSavings);
+  if (availableEl) {
+    availableEl.textContent = formatCurrency(availableNow);
+  }
+
+  if (availableNote) {
+    if (totals.totalSavings > 0) {
+      availableNote.textContent = `You currently have ${formatCurrency(availableNow)} available to put toward goals.`;
+    } else if (totals.totalSavings === 0) {
+      availableNote.textContent = "You do not have extra funds available yet. Add income or reduce expenses to create goal room.";
+    } else {
+      availableNote.textContent = `You are currently behind by ${formatCurrency(Math.abs(totals.totalSavings))}, so there are no available funds for goals right now.`;
+    }
+  }
 
   if (!data.goals.length) {
-    list.innerHTML = '<div class="empty-state">No goals added yet. Add your first goal to track progress using savings.</div>';
+    list.innerHTML = '<div class="empty-state">No goals added yet. Add your first goal to track progress using savings and due dates.</div>';
     return;
   }
 
   list.innerHTML = data.goals.map((goal) => {
-    const goalAmount = Number(goal.amount) || 0;
-    const progress = goalAmount > 0 ? Math.max(0, Math.min((availableSavings / goalAmount) * 100, 100)) : 0;
-    const isOnTrack = availableSavings >= goalAmount;
+    const plan = calculateGoalPlan(goal.amount, availableNow, goal.dueDate);
+    const dueText = formatDate(goal.dueDate);
+
+    let timeText = "No due date";
+    if (plan.daysLeft !== null) {
+      if (plan.daysLeft < 0) {
+        timeText = `${Math.abs(plan.daysLeft)} days overdue`;
+      } else if (plan.daysLeft === 0) {
+        timeText = "Due today";
+      } else {
+        timeText = `${plan.daysLeft} days left`;
+      }
+    }
+
+    let statusText = "Not Enough";
+    let statusClass = "status-bad";
+
+    if (plan.remaining <= 0) {
+      statusText = "On Track";
+      statusClass = "status-good";
+    } else if (plan.daysLeft !== null && plan.daysLeft > 0 && plan.monthlyNeeded <= availableNow && availableNow > 0) {
+      statusText = "On Track";
+      statusClass = "status-good";
+    }
+
+    const saveNowText = plan.remaining <= 0
+      ? "Covered"
+      : plan.daysLeft !== null && plan.daysLeft > 0
+        ? `${formatCurrency(plan.monthlyNeeded)} / month`
+        : formatCurrency(plan.remaining);
 
     return `
       <div class="goal-card">
         <div class="goal-head">
           <div>
             <strong>${escapeHtml(goal.name)}</strong>
-            <div class="subtle">Target: ${formatCurrency(goalAmount)}</div>
+            <div class="subtle">Target: ${formatCurrency(goal.amount)}</div>
           </div>
-          <span class="status-pill ${isOnTrack ? "status-good" : "status-bad"}">
-            ${isOnTrack ? "On Track" : "Not Enough"}
-          </span>
+          <span class="status-pill ${statusClass}">${statusText}</span>
         </div>
+
         <div class="progress-track large">
-          <div class="progress-fill fill-goals" style="width: ${progress}%"></div>
+          <div class="progress-fill fill-goals" style="width: ${plan.progress}%"></div>
         </div>
+
+        <div class="goal-breakdown">
+          <div class="goal-stat">
+            <span>Available Now</span>
+            <strong>${formatCurrency(availableNow)}</strong>
+          </div>
+
+          <div class="goal-stat">
+            <span>Still Needed</span>
+            <strong>${formatCurrency(plan.remaining)}</strong>
+          </div>
+
+          <div class="goal-stat">
+            <span>Due Date</span>
+            <strong>${dueText}</strong>
+          </div>
+
+          <div class="goal-stat">
+            <span>Need To Save</span>
+            <strong>${saveNowText}</strong>
+          </div>
+        </div>
+
         <div class="goal-meta">
-          <span>${progress.toFixed(1)}% funded from current savings</span>
-          <span>Available savings: ${formatCurrency(totals.totalSavings)}</span>
+          <span>${plan.progress.toFixed(1)}% funded</span>
+          <span>${timeText}</span>
         </div>
       </div>
     `;
