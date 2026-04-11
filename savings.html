@@ -1,0 +1,458 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title>FinanceFlow | Savings</title>
++  <link rel="preconnect" href="https://fonts.googleapis.com">
++  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
++  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
++  <style>
++    :root {
++      --bg-main: #020617;
++      --bg-alt: #0f172a;
++      --panel: rgba(15, 23, 42, 0.92);
++      --panel-strong: rgba(19, 32, 61, 0.95);
++      --border: rgba(148, 163, 184, 0.16);
++      --text: #e2e8f0;
++      --muted: #94a3b8;
++      --accent: #38bdf8;
++      --success: #22c55e;
++      --warning: #f59e0b;
++      --danger: #fb7185;
++      --shadow: 0 28px 80px rgba(2, 6, 23, 0.45);
++      --radius: 24px;
++    }
++
++    * {
++      box-sizing: border-box;
++    }
++
++    body {
++      margin: 0;
++      min-height: 100vh;
++      font-family: "Plus Jakarta Sans", sans-serif;
++      color: var(--text);
++      background:
++        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 30%),
++        radial-gradient(circle at top right, rgba(30, 41, 59, 0.65), transparent 34%),
++        linear-gradient(180deg, #0f172a 0%, #020617 100%);
++    }
++
++    a {
++      color: inherit;
++      text-decoration: none;
++    }
++
++    .container {
++      width: min(1200px, calc(100% - 32px));
++      margin: 0 auto;
++      padding: 28px 0 40px;
++    }
++
++    .topbar {
++      display: flex;
++      justify-content: space-between;
++      align-items: center;
++      gap: 18px;
++      margin-bottom: 24px;
++      flex-wrap: wrap;
++    }
++
++    .brand h1 {
++      margin: 0;
++      font-size: clamp(1.7rem, 4vw, 2.6rem);
++      font-weight: 800;
++      letter-spacing: -0.04em;
++    }
++
++    .brand p {
++      margin: 8px 0 0;
++      color: var(--muted);
++      max-width: 620px;
++      line-height: 1.6;
++    }
++
++    .nav {
++      display: flex;
++      gap: 12px;
++      flex-wrap: wrap;
++    }
++
++    .nav a {
++      padding: 12px 18px;
++      border-radius: 999px;
++      border: 1px solid var(--border);
++      background: rgba(15, 23, 42, 0.72);
++      color: var(--muted);
++      font-weight: 600;
++      transition: 0.2s ease;
++    }
++
++    .nav a:hover,
++    .nav a.active {
++      color: #f8fafc;
++      border-color: rgba(56, 189, 248, 0.45);
++      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(15, 23, 42, 0.9));
++      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.16);
++    }
++
++    .hero {
++      padding: 28px;
++      border-radius: var(--radius);
++      background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(15, 23, 42, 0.92));
++      border: 1px solid rgba(34, 197, 94, 0.16);
++      box-shadow: var(--shadow);
++      margin-bottom: 24px;
++    }
++
++    .hero-tag {
++      display: inline-flex;
++      padding: 8px 12px;
++      border-radius: 999px;
++      background: rgba(56, 189, 248, 0.12);
++      border: 1px solid rgba(56, 189, 248, 0.2);
++      color: var(--accent);
++      font-size: 0.9rem;
++      font-weight: 700;
++      margin-bottom: 16px;
++    }
++
++    .hero h2 {
++      margin: 0;
++      font-size: clamp(1.6rem, 4vw, 2.4rem);
++      letter-spacing: -0.03em;
++    }
++
++    .hero p {
++      margin: 12px 0 0;
++      color: var(--muted);
++      line-height: 1.7;
++      max-width: 760px;
++    }
++
++    .stats-grid {
++      display: grid;
++      grid-template-columns: repeat(3, minmax(0, 1fr));
++      gap: 18px;
++      margin-bottom: 24px;
++    }
++
++    .card {
++      background: var(--panel);
++      border: 1px solid var(--border);
++      border-radius: var(--radius);
++      padding: 22px;
++      box-shadow: var(--shadow);
++      backdrop-filter: blur(10px);
++    }
++
++    .stat-label {
++      color: var(--muted);
++      font-size: 0.95rem;
++      margin-bottom: 14px;
++    }
++
++    .stat-value {
++      font-size: clamp(1.8rem, 3vw, 2.7rem);
++      font-weight: 800;
++      letter-spacing: -0.05em;
++      margin: 0 0 10px;
++    }
++
++    .stat-meta {
++      color: var(--muted);
++      line-height: 1.6;
++      margin: 0;
++    }
++
++    .layout {
++      display: grid;
++      grid-template-columns: 1.2fr 0.8fr;
++      gap: 18px;
++    }
++
++    .progress-track {
++      width: 100%;
++      height: 18px;
++      background: rgba(30, 41, 59, 0.9);
++      border-radius: 999px;
++      overflow: hidden;
++      margin: 18px 0 14px;
++    }
++
++    .progress-fill {
++      height: 100%;
++      width: 0;
++      border-radius: inherit;
++      background: linear-gradient(90deg, #22c55e, #38bdf8);
++      transition: width 0.35s ease;
++    }
++
++    .status {
++      display: inline-flex;
++      align-items: center;
++      padding: 8px 12px;
++      border-radius: 999px;
++      font-size: 0.85rem;
++      font-weight: 700;
++      margin-top: 10px;
++    }
++
++    .status.good {
++      background: rgba(34, 197, 94, 0.14);
++      color: #86efac;
++    }
++
++    .status.warn {
++      background: rgba(245, 158, 11, 0.14);
++      color: #fcd34d;
++    }
++
++    .status.bad {
++      background: rgba(251, 113, 133, 0.14);
++      color: #fda4af;
++    }
++
++    .tip-list {
++      display: grid;
++      gap: 12px;
++    }
++
++    .tip {
++      padding: 16px 18px;
++      border-radius: 18px;
++      background: rgba(15, 23, 42, 0.78);
++      border: 1px solid rgba(148, 163, 184, 0.12);
++      color: var(--muted);
++      line-height: 1.6;
++    }
++
++    @media (max-width: 980px) {
++      .stats-grid {
++        grid-template-columns: 1fr;
++      }
++
++      .layout {
++        grid-template-columns: 1fr;
++      }
++    }
++
++    @media (max-width: 640px) {
++      .container {
++        width: min(100% - 20px, 100%);
++        padding: 18px 0 28px;
++      }
++
++      .hero,
++      .card {
++        padding: 18px;
++        border-radius: 20px;
++      }
++
++      .nav {
++        width: 100%;
++      }
++
++      .nav a {
++        flex: 1 1 calc(50% - 8px);
++        text-align: center;
++      }
++    }
++  </style>
++</head>
++<body>
++  <div class="container">
++    <header class="topbar">
++      <div class="brand">
++        <h1>FinanceFlow</h1>
++        <p>See how much of your income you keep, how strong your savings rate is, and whether your spending is sustainable.</p>
++      </div>
++      <nav class="nav">
++        <a href="index.html">Dashboard</a>
++        <a href="income.html">Income</a>
++        <a href="expenses.html">Expenses</a>
++        <a class="active" href="savings.html">Savings</a>
++        <a href="goals.html">Goals</a>
++      </nav>
++    </header>
++
++    <section class="hero">
++      <div class="hero-tag">Savings summary</div>
++      <h2>Understand your savings rate and get a quick read on your financial momentum.</h2>
++      <p>Your savings figure is calculated automatically as total income minus total expenses, with safe handling for empty data and zero income.</p>
++    </section>
++
++    <section class="stats-grid">
++      <article class="card">
++        <div class="stat-label">Total Income</div>
++        <p class="stat-value" id="total-income">$0.00</p>
++        <p class="stat-meta">All income sources combined.</p>
++      </article>
++      <article class="card">
++        <div class="stat-label">Total Expenses</div>
++        <p class="stat-value" id="total-expenses">$0.00</p>
++        <p class="stat-meta">Everything you have spent so far.</p>
++      </article>
++      <article class="card">
++        <div class="stat-label">Total Savings</div>
++        <p class="stat-value" id="total-savings">$0.00</p>
++        <p class="stat-meta">Available cash left after expenses.</p>
++      </article>
++    </section>
++
++    <section class="layout">
++      <article class="card">
++        <h3 style="margin: 0 0 14px;">Savings Performance</h3>
++        <p class="stat-meta" id="savings-copy">Add income and expenses to start tracking your savings performance.</p>
++        <div class="progress-track">
++          <div id="savings-progress" class="progress-fill"></div>
++        </div>
++        <p class="stat-value" id="savings-rate" style="font-size: clamp(1.6rem, 4vw, 2.2rem); margin-top: 0;">0%</p>
++        <p class="stat-meta" id="savings-suggestion">You are saving 0% of your income.</p>
++        <div id="savings-status" class="status warn">No income yet</div>
++      </article>
++
++      <article class="card">
++        <h3 style="margin: 0 0 18px;">Quick Guidance</h3>
++        <div class="tip-list">
++          <div class="tip" id="tip-one">Once income is added, this page will show how much of it you keep after expenses.</div>
++          <div class="tip" id="tip-two">Your savings rate updates across every page automatically because all data is shared with localStorage.</div>
++          <div class="tip" id="tip-three">Keep expenses lower than income to maintain positive progress for savings and goals.</div>
++        </div>
++      </article>
++    </section>
++  </div>
++
++  <script>
++    const STORAGE_KEY = "financeTrackerData";
++
++    function getData() {
++      const emptyData = { incomes: [], expenses: [], goals: [] };
++
++      try {
++        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
++
++        if (!parsed || typeof parsed !== "object") {
++          return emptyData;
++        }
++
++        return {
++          incomes: Array.isArray(parsed.incomes) ? parsed.incomes : [],
++          expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
++          goals: Array.isArray(parsed.goals) ? parsed.goals : []
++        };
++      } catch (error) {
++        return emptyData;
++      }
++    }
++
++    function saveData(data) {
++      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
++    }
++
++    function formatCurrency(value) {
++      return new Intl.NumberFormat("en-US", {
++        style: "currency",
++        currency: "USD"
++      }).format(Number(value) || 0);
++    }
++
++    function calculateTotals(data) {
++      const totalIncome = data.incomes.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
++      const totalExpenses = data.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
++      const totalSavings = totalIncome - totalExpenses;
++      const totalGoals = data.goals.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
++
++      return { totalIncome, totalExpenses, totalSavings, totalGoals };
++    }
++
++    function addIncome(event) {
++      if (event) {
++        event.preventDefault();
++      }
++    }
++
++    function addExpense(event) {
++      if (event) {
++        event.preventDefault();
++      }
++    }
++
++    function addGoal(event) {
++      if (event) {
++        event.preventDefault();
++      }
++    }
++
++    function render() {
++      const data = getData();
++      const { totalIncome, totalExpenses, totalSavings } = calculateTotals(data);
++      const savingsRate = totalIncome > 0 ? Math.max((totalSavings / totalIncome) * 100, 0) : 0;
++
++      document.getElementById("total-income").textContent = formatCurrency(totalIncome);
++      document.getElementById("total-expenses").textContent = formatCurrency(totalExpenses);
++      document.getElementById("total-savings").textContent = formatCurrency(totalSavings);
++
++      document.getElementById("savings-rate").textContent = `${savingsRate.toFixed(1)}%`;
++      document.getElementById("savings-progress").style.width = `${Math.min(savingsRate, 100)}%`;
++
++      const copy = document.getElementById("savings-copy");
++      const suggestion = document.getElementById("savings-suggestion");
++      const status = document.getElementById("savings-status");
++      const tipOne = document.getElementById("tip-one");
++      const tipTwo = document.getElementById("tip-two");
++      const tipThree = document.getElementById("tip-three");
++
++      if (totalIncome === 0) {
++        copy.textContent = "Add income first to calculate a savings percentage.";
++        suggestion.textContent = "You are saving 0% of your income.";
++        status.textContent = "No income yet";
++        status.className = "status warn";
++        tipOne.textContent = "Your savings percentage safely stays at 0% until income is added, so there is no division-by-zero crash.";
++        tipTwo.textContent = "Add at least one income entry and one expense entry for a clearer picture of your cash flow.";
++        tipThree.textContent = "Once you start logging data, this page will instantly summarize your savings health.";
++        return;
++      }
++
++      if (totalSavings < 0) {
++        copy.textContent = "Your expenses are higher than your income right now.";
++        suggestion.textContent = `You are overspending by ${formatCurrency(Math.abs(totalSavings))}.`;
++        status.textContent = "Negative savings";
++        status.className = "status bad";
++        document.getElementById("savings-progress").style.width = "0%";
++        tipOne.textContent = "Focus on trimming one or two recurring expense categories first.";
++        tipTwo.textContent = "Even small reductions can move your savings back into positive territory quickly.";
++        tipThree.textContent = "Your goals page will start showing healthier progress once total savings becomes positive.";
++        return;
++      }
++
++      copy.textContent = `You currently keep ${formatCurrency(totalSavings)} after expenses.`;
++      suggestion.textContent = `You are saving ${savingsRate.toFixed(1)}% of your income.`;
++
++      if (savingsRate >= 30) {
++        status.textContent = "Strong savings rate";
++        status.className = "status good";
++        tipOne.textContent = "You have a strong savings cushion relative to your income.";
++        tipTwo.textContent = "Consider allocating some of this progress toward your financial goals.";
++        tipThree.textContent = "Keep your largest expense category stable so your savings rate stays high.";
++      } else if (savingsRate >= 15) {
++        status.textContent = "Healthy progress";
++        status.className = "status warn";
++        tipOne.textContent = "You are building savings consistently and have room to improve further.";
++        tipTwo.textContent = "A small reduction in non-essential spending could push your savings rate higher.";
++        tipThree.textContent = "You are in a solid position to keep funding your goals steadily.";
++      } else {
++        status.textContent = "Needs attention";
++        status.className = "status bad";
++        tipOne.textContent = "Your savings rate is positive, but still on the lower side.";
++        tipTwo.textContent = "Try increasing income or cutting one flexible expense category.";
++        tipThree.textContent = "Every extra dollar left unspent will improve your goal progress.";
++      }
++    }
++
++    saveData(getData());
++    render();
++  </script>
++</body>
++</html>
