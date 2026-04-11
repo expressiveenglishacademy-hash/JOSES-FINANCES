@@ -9,22 +9,16 @@
 +  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 +  <style>
 +    :root {
-+      --bg-main: #020617;
-+      --bg-alt: #0f172a;
 +      --panel: rgba(15, 23, 42, 0.92);
-+      --panel-strong: rgba(19, 32, 61, 0.95);
 +      --border: rgba(148, 163, 184, 0.16);
 +      --text: #e2e8f0;
 +      --muted: #94a3b8;
 +      --accent: #38bdf8;
-+      --danger: #fb7185;
 +      --shadow: 0 28px 80px rgba(2, 6, 23, 0.45);
 +      --radius: 24px;
 +    }
 +
-+    * {
-+      box-sizing: border-box;
-+    }
++    * { box-sizing: border-box; }
 +
 +    body {
 +      margin: 0;
@@ -37,10 +31,7 @@
 +        linear-gradient(180deg, #0f172a 0%, #020617 100%);
 +    }
 +
-+    a {
-+      color: inherit;
-+      text-decoration: none;
-+    }
++    a { color: inherit; text-decoration: none; }
 +
 +    .container {
 +      width: min(1200px, calc(100% - 32px));
@@ -95,17 +86,24 @@
 +      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.16);
 +    }
 +
++    .hero,
++    .card {
++      background: var(--panel);
++      border: 1px solid var(--border);
++      border-radius: var(--radius);
++      box-shadow: var(--shadow);
++      backdrop-filter: blur(10px);
++    }
++
 +    .hero {
 +      display: grid;
 +      grid-template-columns: 1.2fr auto;
 +      gap: 18px;
 +      align-items: center;
 +      padding: 28px;
-+      border-radius: var(--radius);
-+      background: linear-gradient(135deg, rgba(251, 113, 133, 0.1), rgba(15, 23, 42, 0.92));
-+      border: 1px solid rgba(251, 113, 133, 0.16);
-+      box-shadow: var(--shadow);
 +      margin-bottom: 24px;
++      background: linear-gradient(135deg, rgba(251, 113, 133, 0.1), rgba(15, 23, 42, 0.92));
++      border-color: rgba(251, 113, 133, 0.16);
 +    }
 +
 +    .hero-tag {
@@ -158,19 +156,8 @@
 +      gap: 18px;
 +    }
 +
-+    .right-stack {
-+      display: grid;
-+      gap: 18px;
-+    }
-+
-+    .card {
-+      background: var(--panel);
-+      border: 1px solid var(--border);
-+      border-radius: var(--radius);
-+      padding: 22px;
-+      box-shadow: var(--shadow);
-+      backdrop-filter: blur(10px);
-+    }
++    .right-stack { display: grid; gap: 18px; }
++    .card { padding: 22px; }
 +
 +    .section-title {
 +      margin: 0 0 18px;
@@ -178,10 +165,7 @@
 +      letter-spacing: -0.02em;
 +    }
 +
-+    .form-grid {
-+      display: grid;
-+      gap: 14px;
-+    }
++    .form-grid { display: grid; gap: 14px; }
 +
 +    label {
 +      display: grid;
@@ -232,18 +216,10 @@
 +      margin-top: 6px;
 +    }
 +
-+    .message.error {
-+      color: #fda4af;
-+    }
++    .error { color: #fda4af; }
++    .success { color: #86efac; }
 +
-+    .message.success {
-+      color: #86efac;
-+    }
-+
-+    .list {
-+      display: grid;
-+      gap: 12px;
-+    }
++    .list { display: grid; gap: 12px; }
 +
 +    .list-item {
 +      display: flex;
@@ -310,9 +286,7 @@
 +        grid-template-columns: 1fr;
 +      }
 +
-+      .hero-total {
-+        text-align: left;
-+      }
++      .hero-total { text-align: left; }
 +    }
 +
 +    @media (max-width: 640px) {
@@ -327,9 +301,7 @@
 +        border-radius: 20px;
 +      }
 +
-+      .nav {
-+        width: 100%;
-+      }
++      .nav { width: 100%; }
 +
 +      .nav a {
 +        flex: 1 1 calc(50% - 8px);
@@ -421,14 +393,11 @@
 +
 +    function getData() {
 +      const emptyData = { incomes: [], expenses: [], goals: [] };
-+
 +      try {
 +        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-+
 +        if (!parsed || typeof parsed !== "object") {
 +          return emptyData;
 +        }
-+
 +        return {
 +          incomes: Array.isArray(parsed.incomes) ? parsed.incomes : [],
 +          expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
@@ -455,26 +424,19 @@
 +      const totalExpenses = data.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 +      const totalSavings = totalIncome - totalExpenses;
 +      const totalGoals = data.goals.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-+
 +      return { totalIncome, totalExpenses, totalSavings, totalGoals };
 +    }
 +
 +    function setMessage(elementId, text, type) {
 +      const message = document.getElementById(elementId);
-+
 +      if (!message) {
 +        return;
 +      }
-+
 +      message.textContent = text;
 +      message.className = `message ${type}`;
 +    }
 +
-+    function addIncome(event) {
-+      if (event) {
-+        event.preventDefault();
-+      }
-+    }
++    function addIncome(event) { if (event) { event.preventDefault(); } }
 +
 +    function addExpense(event) {
 +      if (event) {
@@ -484,7 +446,6 @@
 +      const nameInput = document.getElementById("expense-name");
 +      const categoryInput = document.getElementById("expense-category");
 +      const amountInput = document.getElementById("expense-amount");
-+
 +      const name = nameInput.value.trim();
 +      const category = categoryInput.value;
 +      const amount = Number(amountInput.value);
@@ -508,11 +469,7 @@
 +      render();
 +    }
 +
-+    function addGoal(event) {
-+      if (event) {
-+        event.preventDefault();
-+      }
-+    }
++    function addGoal(event) { if (event) { event.preventDefault(); } }
 +
 +    function renderExpenseChart(expenses) {
 +      const canvas = document.getElementById("expense-chart");
@@ -539,9 +496,6 @@
 +        return accumulator;
 +      }, {});
 +
-+      const labels = Object.keys(grouped);
-+      const values = Object.values(grouped);
-+
 +      if (expenseChart) {
 +        expenseChart.destroy();
 +      }
@@ -549,10 +503,10 @@
 +      expenseChart = new Chart(canvas, {
 +        type: "pie",
 +        data: {
-+          labels,
++          labels: Object.keys(grouped),
 +          datasets: [
 +            {
-+              data: values,
++              data: Object.values(grouped),
 +              backgroundColor: ["#38bdf8", "#fb7185", "#f59e0b", "#22c55e"],
 +              borderColor: "#0f172a",
 +              borderWidth: 4
@@ -568,9 +522,7 @@
 +              labels: {
 +                color: "#cbd5e1",
 +                padding: 18,
-+                font: {
-+                  family: "Plus Jakarta Sans"
-+                }
++                font: { family: "Plus Jakarta Sans" }
 +              }
 +            }
 +          }
@@ -589,24 +541,21 @@
 +      if (!data.expenses.length) {
 +        expenseList.innerHTML = '<div class="empty-state">No expenses added yet. Start tracking spending to see your chart and totals.</div>';
 +      } else {
-+        expenseList.innerHTML = data.expenses
-+          .map((expense) => `
-+            <div class="list-item">
-+              <div>
-+                <strong>${expense.name}</strong>
-+                <span>${expense.category} • ${new Date(expense.createdAt).toLocaleDateString()}</span>
-+              </div>
-+              <strong>${formatCurrency(expense.amount)}</strong>
++        expenseList.innerHTML = data.expenses.map((expense) => `
++          <div class="list-item">
++            <div>
++              <strong>${expense.name}</strong>
++              <span>${expense.category} • ${new Date(expense.createdAt).toLocaleDateString()}</span>
 +            </div>
-+          `)
-+          .join("");
++            <strong>${formatCurrency(expense.amount)}</strong>
++          </div>
++        `).join("");
 +      }
 +
 +      renderExpenseChart(data.expenses);
 +    }
 +
 +    document.getElementById("expense-form").addEventListener("submit", addExpense);
-+
 +    saveData(getData());
 +    render();
 +  </script>
