@@ -1,14 +1,9 @@
-diff --git a/C:\Users\andre\OneDrive\Desktop\Comps project\finance-app/expenses.html b/C:\Users\andre\OneDrive\Desktop\Comps project\finance-app/expenses.html
-new file mode 100644
---- /dev/null
-+++ b/C:\Users\andre\OneDrive\Desktop\Comps project\finance-app/expenses.html
-@@ -0,0 +1,614 @@
 +<!DOCTYPE html>
 +<html lang="en">
 +<head>
 +  <meta charset="UTF-8">
 +  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-+  <title>FinanceFlow | Expenses</title>
++  <title>FinanceFlow | Dashboard</title>
 +  <link rel="preconnect" href="https://fonts.googleapis.com">
 +  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 +  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,6 +17,9 @@ new file mode 100644
 +      --text: #e2e8f0;
 +      --muted: #94a3b8;
 +      --accent: #38bdf8;
++      --accent-soft: rgba(56, 189, 248, 0.16);
++      --success: #22c55e;
++      --warning: #f59e0b;
 +      --danger: #fb7185;
 +      --shadow: 0 28px 80px rgba(2, 6, 23, 0.45);
 +      --radius: 24px;
@@ -101,14 +99,10 @@ new file mode 100644
 +    }
 +
 +    .hero {
-+      display: grid;
-+      grid-template-columns: 1.2fr auto;
-+      gap: 18px;
-+      align-items: center;
 +      padding: 28px;
 +      border-radius: var(--radius);
-+      background: linear-gradient(135deg, rgba(251, 113, 133, 0.1), rgba(15, 23, 42, 0.92));
-+      border: 1px solid rgba(251, 113, 133, 0.16);
++      background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.92));
++      border: 1px solid rgba(56, 189, 248, 0.22);
 +      box-shadow: var(--shadow);
 +      margin-bottom: 24px;
 +    }
@@ -135,37 +129,14 @@ new file mode 100644
 +      margin: 12px 0 0;
 +      color: var(--muted);
 +      line-height: 1.7;
++      max-width: 760px;
 +    }
 +
-+    .hero-total {
-+      padding: 18px 22px;
-+      min-width: 220px;
-+      border-radius: 22px;
-+      background: rgba(15, 23, 42, 0.78);
-+      border: 1px solid rgba(251, 113, 133, 0.16);
-+      text-align: right;
-+    }
-+
-+    .hero-total span {
-+      display: block;
-+      color: var(--muted);
-+      margin-bottom: 8px;
-+    }
-+
-+    .hero-total strong {
-+      font-size: clamp(1.8rem, 4vw, 2.6rem);
-+      letter-spacing: -0.05em;
-+    }
-+
-+    .layout {
++    .stats-grid {
 +      display: grid;
-+      grid-template-columns: 0.95fr 1.05fr;
++      grid-template-columns: repeat(4, minmax(0, 1fr));
 +      gap: 18px;
-+    }
-+
-+    .right-stack {
-+      display: grid;
-+      gap: 18px;
++      margin-bottom: 24px;
 +    }
 +
 +    .card {
@@ -177,98 +148,105 @@ new file mode 100644
 +      backdrop-filter: blur(10px);
 +    }
 +
++    .stat-label {
++      color: var(--muted);
++      font-size: 0.95rem;
++      margin-bottom: 14px;
++    }
++
++    .stat-value {
++      font-size: clamp(1.8rem, 3vw, 2.7rem);
++      font-weight: 800;
++      letter-spacing: -0.05em;
++      margin: 0 0 10px;
++    }
++
++    .stat-meta {
++      color: var(--muted);
++      line-height: 1.55;
++      margin: 0;
++    }
++
++    .content-grid {
++      display: grid;
++      grid-template-columns: 1.3fr 1fr;
++      gap: 18px;
++    }
++
 +    .section-title {
 +      margin: 0 0 18px;
-+      font-size: 1.12rem;
++      font-size: 1.15rem;
 +      letter-spacing: -0.02em;
 +    }
 +
-+    .form-grid {
++    .bar-stack {
 +      display: grid;
-+      gap: 14px;
++      gap: 18px;
 +    }
 +
-+    label {
++    .bar-row {
 +      display: grid;
 +      gap: 8px;
++    }
++
++    .bar-header {
++      display: flex;
++      justify-content: space-between;
++      gap: 12px;
 +      color: var(--muted);
 +      font-size: 0.95rem;
 +    }
 +
-+    input,
-+    select {
++    .bar-track {
 +      width: 100%;
-+      padding: 14px 16px;
-+      border-radius: 16px;
-+      border: 1px solid rgba(148, 163, 184, 0.18);
-+      background: rgba(15, 23, 42, 0.9);
-+      color: var(--text);
-+      outline: none;
-+      font: inherit;
-+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
++      height: 12px;
++      background: rgba(30, 41, 59, 0.86);
++      border-radius: 999px;
++      overflow: hidden;
 +    }
 +
-+    input:focus,
-+    select:focus {
-+      border-color: rgba(56, 189, 248, 0.55);
-+      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
++    .bar-fill {
++      height: 100%;
++      border-radius: inherit;
++      transition: width 0.35s ease;
 +    }
 +
-+    .button {
-+      border: none;
-+      border-radius: 16px;
-+      padding: 14px 18px;
-+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
-+      color: #02111f;
-+      font: inherit;
-+      font-weight: 800;
-+      cursor: pointer;
-+      transition: transform 0.2s ease, box-shadow 0.2s ease;
++    .bar-fill.income {
++      background: linear-gradient(90deg, #38bdf8, #0ea5e9);
 +    }
 +
-+    .button:hover {
-+      transform: translateY(-1px);
-+      box-shadow: 0 16px 30px rgba(56, 189, 248, 0.26);
++    .bar-fill.expense {
++      background: linear-gradient(90deg, #fb7185, #f43f5e);
 +    }
 +
-+    .message {
-+      min-height: 22px;
-+      font-size: 0.92rem;
-+      margin-top: 6px;
++    .bar-fill.savings {
++      background: linear-gradient(90deg, #22c55e, #14b8a6);
 +    }
 +
-+    .message.error {
-+      color: #fda4af;
-+    }
-+
-+    .message.success {
-+      color: #86efac;
-+    }
-+
-+    .list {
++    .mini-list {
 +      display: grid;
 +      gap: 12px;
 +    }
 +
-+    .list-item {
++    .mini-item {
 +      display: flex;
 +      justify-content: space-between;
 +      gap: 16px;
-+      padding: 16px 18px;
++      padding: 14px 16px;
 +      border-radius: 18px;
-+      background: rgba(15, 23, 42, 0.78);
++      background: rgba(15, 23, 42, 0.74);
 +      border: 1px solid rgba(148, 163, 184, 0.12);
 +    }
 +
-+    .list-item strong {
++    .mini-item strong {
 +      display: block;
 +      margin-bottom: 4px;
 +      font-size: 0.98rem;
 +    }
 +
-+    .list-item span {
++    .mini-item span {
 +      color: var(--muted);
-+      font-size: 0.9rem;
++      font-size: 0.88rem;
 +    }
 +
 +    .empty-state {
@@ -280,43 +258,37 @@ new file mode 100644
 +      line-height: 1.6;
 +    }
 +
-+    .category-chip {
++    .pill {
 +      display: inline-flex;
 +      align-items: center;
-+      padding: 8px 12px;
++      padding: 7px 12px;
 +      border-radius: 999px;
-+      background: rgba(56, 189, 248, 0.1);
-+      color: #bae6fd;
 +      font-size: 0.85rem;
 +      font-weight: 700;
 +    }
 +
-+    .chart-wrap {
-+      position: relative;
-+      min-height: 320px;
++    .pill.good {
++      background: rgba(34, 197, 94, 0.14);
++      color: #86efac;
 +    }
 +
-+    .chart-empty {
-+      display: none;
-+      place-items: center;
-+      min-height: 260px;
-+      border-radius: 18px;
-+      background: rgba(15, 23, 42, 0.7);
-+      border: 1px dashed rgba(148, 163, 184, 0.18);
-+      color: var(--muted);
-+      text-align: center;
-+      padding: 20px;
-+      line-height: 1.6;
++    .pill.warn {
++      background: rgba(245, 158, 11, 0.14);
++      color: #fcd34d;
++    }
++
++    .pill.bad {
++      background: rgba(251, 113, 133, 0.14);
++      color: #fda4af;
 +    }
 +
 +    @media (max-width: 980px) {
-+      .layout,
-+      .hero {
-+        grid-template-columns: 1fr;
++      .stats-grid {
++        grid-template-columns: repeat(2, minmax(0, 1fr));
 +      }
 +
-+      .hero-total {
-+        text-align: left;
++      .content-grid {
++        grid-template-columns: 1fr;
 +      }
 +    }
 +
@@ -330,6 +302,10 @@ new file mode 100644
 +      .card {
 +        padding: 18px;
 +        border-radius: 20px;
++      }
++
++      .stats-grid {
++        grid-template-columns: 1fr;
 +      }
 +
 +      .nav {
@@ -348,81 +324,96 @@ new file mode 100644
 +    <header class="topbar">
 +      <div class="brand">
 +        <h1>FinanceFlow</h1>
-+        <p>Organize spending by category and visualize your expense breakdown with a live pie chart.</p>
++        <p>A clean personal finance dashboard with shared localStorage data across income, expenses, savings, and goals.</p>
 +      </div>
 +      <nav class="nav">
-+        <a href="index.html">Dashboard</a>
++        <a class="active" href="index.html">Dashboard</a>
 +        <a href="income.html">Income</a>
-+        <a class="active" href="expenses.html">Expenses</a>
++        <a href="expenses.html">Expenses</a>
 +        <a href="savings.html">Savings</a>
 +        <a href="goals.html">Goals</a>
 +      </nav>
 +    </header>
 +
 +    <section class="hero">
-+      <div>
-+        <div class="hero-tag">Expense tracker</div>
-+        <h2>Track outgoing money across home, food, family, personal, and other spending categories.</h2>
-+        <p>Every expense updates your savings automatically and feeds the pie chart summary below.</p>
-+      </div>
-+      <div class="hero-total">
-+        <span>Total Expenses</span>
-+        <strong id="hero-expense-total">$0.00</strong>
-+      </div>
++      <div class="hero-tag">Financial overview</div>
++      <h2>Track what comes in, what goes out, and how close you are to your goals.</h2>
++      <p>The dashboard summarizes your shared data instantly. Add entries from the other pages and everything updates here automatically.</p>
 +    </section>
 +
-+    <section class="layout">
++    <section class="stats-grid">
 +      <article class="card">
-+        <h3 class="section-title">Add Expense</h3>
-+        <form id="expense-form" class="form-grid">
-+          <label>
-+            Expense Name
-+            <input id="expense-name" type="text" placeholder="Groceries, rent, internet">
-+          </label>
-+          <label>
-+            Category
-+            <select id="expense-category">
-+              <option value="Home & Food">Home & Food</option>
-+              <option value="Family">Family</option>
-+              <option value="Personal">Personal</option>
-+              <option value="Other">Other</option>
-+            </select>
-+          </label>
-+          <label>
-+            Amount
-+            <input id="expense-amount" type="number" min="0" step="0.01" placeholder="0.00">
-+          </label>
-+          <button class="button" type="submit">Save Expense</button>
-+          <div id="expense-message" class="message"></div>
-+        </form>
++        <div class="stat-label">Total Income</div>
++        <p class="stat-value" id="total-income">$0.00</p>
++        <p class="stat-meta">All income entries combined.</p>
++      </article>
++      <article class="card">
++        <div class="stat-label">Total Expenses</div>
++        <p class="stat-value" id="total-expenses">$0.00</p>
++        <p class="stat-meta">Every tracked expense across categories.</p>
++      </article>
++      <article class="card">
++        <div class="stat-label">Total Savings</div>
++        <p class="stat-value" id="total-savings">$0.00</p>
++        <p class="stat-meta" id="savings-note">Income minus expenses.</p>
++      </article>
++      <article class="card">
++        <div class="stat-label">Deductions</div>
++        <p class="stat-value" id="deductions-value">0%</p>
++        <p class="stat-meta">Share of your income already spent.</p>
++      </article>
++    </section>
++
++    <section class="content-grid">
++      <article class="card">
++        <h3 class="section-title">Cash Flow Snapshot</h3>
++        <div class="bar-stack">
++          <div class="bar-row">
++            <div class="bar-header">
++              <span>Income</span>
++              <span id="income-line">$0.00</span>
++            </div>
++            <div class="bar-track">
++              <div class="bar-fill income" id="income-bar"></div>
++            </div>
++          </div>
++          <div class="bar-row">
++            <div class="bar-header">
++              <span>Expenses</span>
++              <span id="expense-line">$0.00</span>
++            </div>
++            <div class="bar-track">
++              <div class="bar-fill expense" id="expense-bar"></div>
++            </div>
++          </div>
++          <div class="bar-row">
++            <div class="bar-header">
++              <span>Savings</span>
++              <span id="savings-line">$0.00</span>
++            </div>
++            <div class="bar-track">
++              <div class="bar-fill savings" id="savings-bar"></div>
++            </div>
++          </div>
++        </div>
++        <p class="stat-meta" id="summary-text" style="margin-top: 18px;">Add income and expenses to see your savings pattern.</p>
 +      </article>
 +
-+      <div class="right-stack">
-+        <article class="card">
-+          <div style="display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 18px; flex-wrap: wrap;">
-+            <h3 class="section-title" style="margin: 0;">Expense List</h3>
-+            <div class="category-chip" id="expense-count">0 entries</div>
-+          </div>
-+          <div id="expense-list" class="list">
-+            <div class="empty-state">No expenses added yet. Start tracking spending to see your chart and totals.</div>
-+          </div>
-+        </article>
-+
-+        <article class="card">
-+          <h3 class="section-title">Category Breakdown</h3>
-+          <div class="chart-wrap">
-+            <canvas id="expense-chart"></canvas>
-+            <div id="chart-empty" class="chart-empty">Add some expenses to generate the category pie chart.</div>
-+          </div>
-+        </article>
-+      </div>
++      <article class="card">
++        <h3 class="section-title">Goals Readiness</h3>
++        <p class="stat-meta" id="goal-progress-copy" style="margin-bottom: 18px;">No goals added yet. Head to the goals page to create your targets.</p>
++        <div class="bar-track" style="height: 14px; margin-bottom: 18px;">
++          <div class="bar-fill income" id="goal-coverage-bar"></div>
++        </div>
++        <div id="goal-list-mini" class="mini-list">
++          <div class="empty-state">Your goals will appear here with their live progress based on your current savings.</div>
++        </div>
++      </article>
 +    </section>
 +  </div>
 +
-+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 +  <script>
 +    const STORAGE_KEY = "financeTrackerData";
-+    let expenseChart = null;
 +
 +    function getData() {
 +      const emptyData = { incomes: [], expenses: [], goals: [] };
@@ -464,17 +455,6 @@ new file mode 100644
 +      return { totalIncome, totalExpenses, totalSavings, totalGoals };
 +    }
 +
-+    function setMessage(elementId, text, type) {
-+      const message = document.getElementById(elementId);
-+
-+      if (!message) {
-+        return;
-+      }
-+
-+      message.textContent = text;
-+      message.className = `message ${type}`;
-+    }
-+
 +    function addIncome(event) {
 +      if (event) {
 +        event.preventDefault();
@@ -485,32 +465,6 @@ new file mode 100644
 +      if (event) {
 +        event.preventDefault();
 +      }
-+
-+      const nameInput = document.getElementById("expense-name");
-+      const categoryInput = document.getElementById("expense-category");
-+      const amountInput = document.getElementById("expense-amount");
-+
-+      const name = nameInput.value.trim();
-+      const category = categoryInput.value;
-+      const amount = Number(amountInput.value);
-+
-+      if (!name || !category || !Number.isFinite(amount) || amount <= 0) {
-+        setMessage("expense-message", "Enter a valid expense, category, and amount greater than zero.", "error");
-+        return;
-+      }
-+
-+      const data = getData();
-+      data.expenses.unshift({
-+        name,
-+        category,
-+        amount,
-+        createdAt: new Date().toISOString()
-+      });
-+
-+      saveData(data);
-+      document.getElementById("expense-form").reset();
-+      setMessage("expense-message", "Expense saved successfully.", "success");
-+      render();
 +    }
 +
 +    function addGoal(event) {
@@ -519,98 +473,90 @@ new file mode 100644
 +      }
 +    }
 +
-+    function renderExpenseChart(expenses) {
-+      const canvas = document.getElementById("expense-chart");
-+      const emptyState = document.getElementById("chart-empty");
++    function buildGoalItems(goals, savings) {
++      const list = document.getElementById("goal-list-mini");
 +
-+      if (!expenses.length) {
-+        canvas.style.display = "none";
-+        emptyState.style.display = "grid";
-+
-+        if (expenseChart) {
-+          expenseChart.destroy();
-+          expenseChart = null;
-+        }
-+
++      if (!list) {
 +        return;
 +      }
 +
-+      canvas.style.display = "block";
-+      emptyState.style.display = "none";
-+
-+      const grouped = expenses.reduce((accumulator, expense) => {
-+        const category = expense.category || "Other";
-+        accumulator[category] = (accumulator[category] || 0) + (Number(expense.amount) || 0);
-+        return accumulator;
-+      }, {});
-+
-+      const labels = Object.keys(grouped);
-+      const values = Object.values(grouped);
-+
-+      if (expenseChart) {
-+        expenseChart.destroy();
++      if (!goals.length) {
++        list.innerHTML = '<div class="empty-state">Your goals will appear here with their live progress based on your current savings.</div>';
++        return;
 +      }
 +
-+      expenseChart = new Chart(canvas, {
-+        type: "pie",
-+        data: {
-+          labels,
-+          datasets: [
-+            {
-+              data: values,
-+              backgroundColor: ["#38bdf8", "#fb7185", "#f59e0b", "#22c55e"],
-+              borderColor: "#0f172a",
-+              borderWidth: 4
-+            }
-+          ]
-+        },
-+        options: {
-+          responsive: true,
-+          maintainAspectRatio: false,
-+          plugins: {
-+            legend: {
-+              position: "bottom",
-+              labels: {
-+                color: "#cbd5e1",
-+                padding: 18,
-+                font: {
-+                  family: "Plus Jakarta Sans"
-+                }
-+              }
-+            }
-+          }
-+        }
-+      });
++      list.innerHTML = goals
++        .slice(0, 4)
++        .map((goal) => {
++          const amount = Number(goal.amount) || 0;
++          const progress = amount > 0 ? Math.max(0, Math.min((savings / amount) * 100, 100)) : 0;
++          const statusClass = savings >= amount ? "good" : savings > 0 ? "warn" : "bad";
++          const statusText = savings >= amount ? "On Track" : savings > 0 ? "In Progress" : "Not Enough";
++
++          return `
++            <div class="mini-item">
++              <div>
++                <strong>${goal.name}</strong>
++                <span>${progress.toFixed(1)}% funded</span>
++              </div>
++              <span class="pill ${statusClass}">${statusText}</span>
++            </div>
++          `;
++        })
++        .join("");
 +    }
 +
 +    function render() {
 +      const data = getData();
-+      const { totalExpenses } = calculateTotals(data);
-+      const expenseList = document.getElementById("expense-list");
++      const { totalIncome, totalExpenses, totalSavings, totalGoals } = calculateTotals(data);
 +
-+      document.getElementById("hero-expense-total").textContent = formatCurrency(totalExpenses);
-+      document.getElementById("expense-count").textContent = `${data.expenses.length} ${data.expenses.length === 1 ? "entry" : "entries"}`;
++      const savingsRate = totalIncome > 0 ? Math.max((totalSavings / totalIncome) * 100, 0) : 0;
++      const deductionRate = totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : 0;
++      const comparisonBase = Math.max(totalIncome, totalExpenses, Math.abs(totalSavings), 1);
++      const goalCoverage = totalGoals > 0 ? Math.max(0, Math.min((totalSavings / totalGoals) * 100, 100)) : 0;
 +
-+      if (!data.expenses.length) {
-+        expenseList.innerHTML = '<div class="empty-state">No expenses added yet. Start tracking spending to see your chart and totals.</div>';
++      document.getElementById("total-income").textContent = formatCurrency(totalIncome);
++      document.getElementById("total-expenses").textContent = formatCurrency(totalExpenses);
++      document.getElementById("total-savings").textContent = formatCurrency(totalSavings);
++      document.getElementById("deductions-value").textContent = `${deductionRate.toFixed(1)}%`;
++
++      document.getElementById("income-line").textContent = formatCurrency(totalIncome);
++      document.getElementById("expense-line").textContent = formatCurrency(totalExpenses);
++      document.getElementById("savings-line").textContent = formatCurrency(totalSavings);
++
++      document.getElementById("income-bar").style.width = `${(totalIncome / comparisonBase) * 100}%`;
++      document.getElementById("expense-bar").style.width = `${(totalExpenses / comparisonBase) * 100}%`;
++      document.getElementById("savings-bar").style.width = `${(Math.abs(totalSavings) / comparisonBase) * 100}%`;
++
++      const savingsNote = document.getElementById("savings-note");
++      if (totalSavings >= 0) {
++        savingsNote.textContent = `You are keeping ${savingsRate.toFixed(1)}% of your income.`;
 +      } else {
-+        expenseList.innerHTML = data.expenses
-+          .map((expense) => `
-+            <div class="list-item">
-+              <div>
-+                <strong>${expense.name}</strong>
-+                <span>${expense.category} • ${new Date(expense.createdAt).toLocaleDateString()}</span>
-+              </div>
-+              <strong>${formatCurrency(expense.amount)}</strong>
-+            </div>
-+          `)
-+          .join("");
++        savingsNote.textContent = "Expenses are currently higher than income.";
 +      }
 +
-+      renderExpenseChart(data.expenses);
-+    }
++      const summaryText = document.getElementById("summary-text");
++      if (!data.incomes.length && !data.expenses.length) {
++        summaryText.textContent = "Add your first income and expense entries to unlock your savings snapshot.";
++      } else if (totalSavings >= 0) {
++        summaryText.textContent = `You are saving ${savingsRate.toFixed(1)}% of your income after deductions.`;
++      } else {
++        summaryText.textContent = `You are overspending by ${formatCurrency(Math.abs(totalSavings))}.`;
++      }
 +
-+    document.getElementById("expense-form").addEventListener("submit", addExpense);
++      const goalCopy = document.getElementById("goal-progress-copy");
++      if (!data.goals.length) {
++        goalCopy.textContent = "No goals added yet. Head to the goals page to create your targets.";
++      } else if (totalSavings <= 0) {
++        goalCopy.textContent = "Your goals are waiting for positive savings to start making progress.";
++      } else {
++        goalCopy.textContent = `Current savings covers ${goalCoverage.toFixed(1)}% of your total goal target.`;
++      }
++
++      document.getElementById("goal-coverage-bar").style.width = `${goalCoverage}%`;
++
++      buildGoalItems(data.goals, totalSavings);
++    }
 +
 +    saveData(getData());
 +    render();
