@@ -1,552 +1,75 @@
-+<!DOCTYPE html>
-+<html lang="en">
-+<head>
-+  <meta charset="UTF-8">
-+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-+  <title>FinanceFlow | Goals</title>
-+  <link rel="preconnect" href="https://fonts.googleapis.com">
-+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-+  <style>
-+    :root {
-+      --bg-main: #020617;
-+      --bg-alt: #0f172a;
-+      --panel: rgba(15, 23, 42, 0.92);
-+      --panel-strong: rgba(19, 32, 61, 0.95);
-+      --border: rgba(148, 163, 184, 0.16);
-+      --text: #e2e8f0;
-+      --muted: #94a3b8;
-+      --accent: #38bdf8;
-+      --success: #22c55e;
-+      --warning: #f59e0b;
-+      --danger: #fb7185;
-+      --shadow: 0 28px 80px rgba(2, 6, 23, 0.45);
-+      --radius: 24px;
-+    }
-+
-+    * {
-+      box-sizing: border-box;
-+    }
-+
-+    body {
-+      margin: 0;
-+      min-height: 100vh;
-+      font-family: "Plus Jakarta Sans", sans-serif;
-+      color: var(--text);
-+      background:
-+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 30%),
-+        radial-gradient(circle at top right, rgba(30, 41, 59, 0.65), transparent 34%),
-+        linear-gradient(180deg, #0f172a 0%, #020617 100%);
-+    }
-+
-+    a {
-+      color: inherit;
-+      text-decoration: none;
-+    }
-+
-+    .container {
-+      width: min(1200px, calc(100% - 32px));
-+      margin: 0 auto;
-+      padding: 28px 0 40px;
-+    }
-+
-+    .topbar {
-+      display: flex;
-+      justify-content: space-between;
-+      align-items: center;
-+      gap: 18px;
-+      margin-bottom: 24px;
-+      flex-wrap: wrap;
-+    }
-+
-+    .brand h1 {
-+      margin: 0;
-+      font-size: clamp(1.7rem, 4vw, 2.6rem);
-+      font-weight: 800;
-+      letter-spacing: -0.04em;
-+    }
-+
-+    .brand p {
-+      margin: 8px 0 0;
-+      color: var(--muted);
-+      max-width: 620px;
-+      line-height: 1.6;
-+    }
-+
-+    .nav {
-+      display: flex;
-+      gap: 12px;
-+      flex-wrap: wrap;
-+    }
-+
-+    .nav a {
-+      padding: 12px 18px;
-+      border-radius: 999px;
-+      border: 1px solid var(--border);
-+      background: rgba(15, 23, 42, 0.72);
-+      color: var(--muted);
-+      font-weight: 600;
-+      transition: 0.2s ease;
-+    }
-+
-+    .nav a:hover,
-+    .nav a.active {
-+      color: #f8fafc;
-+      border-color: rgba(56, 189, 248, 0.45);
-+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(15, 23, 42, 0.9));
-+      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.16);
-+    }
-+
-+    .hero {
-+      display: grid;
-+      grid-template-columns: 1.2fr auto;
-+      gap: 18px;
-+      align-items: center;
-+      padding: 28px;
-+      border-radius: var(--radius);
-+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(15, 23, 42, 0.92));
-+      border: 1px solid rgba(245, 158, 11, 0.16);
-+      box-shadow: var(--shadow);
-+      margin-bottom: 24px;
-+    }
-+
-+    .hero-tag {
-+      display: inline-flex;
-+      padding: 8px 12px;
-+      border-radius: 999px;
-+      background: rgba(56, 189, 248, 0.12);
-+      border: 1px solid rgba(56, 189, 248, 0.2);
-+      color: var(--accent);
-+      font-size: 0.9rem;
-+      font-weight: 700;
-+      margin-bottom: 16px;
-+    }
-+
-+    .hero h2 {
-+      margin: 0;
-+      font-size: clamp(1.6rem, 4vw, 2.4rem);
-+      letter-spacing: -0.03em;
-+    }
-+
-+    .hero p {
-+      margin: 12px 0 0;
-+      color: var(--muted);
-+      line-height: 1.7;
-+    }
-+
-+    .hero-total {
-+      padding: 18px 22px;
-+      min-width: 220px;
-+      border-radius: 22px;
-+      background: rgba(15, 23, 42, 0.78);
-+      border: 1px solid rgba(245, 158, 11, 0.16);
-+      text-align: right;
-+    }
-+
-+    .hero-total span {
-+      display: block;
-+      color: var(--muted);
-+      margin-bottom: 8px;
-+    }
-+
-+    .hero-total strong {
-+      font-size: clamp(1.8rem, 4vw, 2.6rem);
-+      letter-spacing: -0.05em;
-+    }
-+
-+    .layout {
-+      display: grid;
-+      grid-template-columns: 0.92fr 1.08fr;
-+      gap: 18px;
-+    }
-+
-+    .card {
-+      background: var(--panel);
-+      border: 1px solid var(--border);
-+      border-radius: var(--radius);
-+      padding: 22px;
-+      box-shadow: var(--shadow);
-+      backdrop-filter: blur(10px);
-+    }
-+
-+    .section-title {
-+      margin: 0 0 18px;
-+      font-size: 1.12rem;
-+      letter-spacing: -0.02em;
-+    }
-+
-+    .form-grid {
-+      display: grid;
-+      gap: 14px;
-+    }
-+
-+    label {
-+      display: grid;
-+      gap: 8px;
-+      color: var(--muted);
-+      font-size: 0.95rem;
-+    }
-+
-+    input {
-+      width: 100%;
-+      padding: 14px 16px;
-+      border-radius: 16px;
-+      border: 1px solid rgba(148, 163, 184, 0.18);
-+      background: rgba(15, 23, 42, 0.9);
-+      color: var(--text);
-+      outline: none;
-+      font: inherit;
-+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-+    }
-+
-+    input:focus {
-+      border-color: rgba(56, 189, 248, 0.55);
-+      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
-+    }
-+
-+    .button {
-+      border: none;
-+      border-radius: 16px;
-+      padding: 14px 18px;
-+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
-+      color: #02111f;
-+      font: inherit;
-+      font-weight: 800;
-+      cursor: pointer;
-+      transition: transform 0.2s ease, box-shadow 0.2s ease;
-+    }
-+
-+    .button:hover {
-+      transform: translateY(-1px);
-+      box-shadow: 0 16px 30px rgba(56, 189, 248, 0.26);
-+    }
-+
-+    .message {
-+      min-height: 22px;
-+      font-size: 0.92rem;
-+      margin-top: 6px;
-+    }
-+
-+    .message.error {
-+      color: #fda4af;
-+    }
-+
-+    .message.success {
-+      color: #86efac;
-+    }
-+
-+    .list {
-+      display: grid;
-+      gap: 14px;
-+    }
-+
-+    .goal-item {
-+      padding: 18px;
-+      border-radius: 20px;
-+      background: rgba(15, 23, 42, 0.78);
-+      border: 1px solid rgba(148, 163, 184, 0.12);
-+    }
-+
-+    .goal-header {
-+      display: flex;
-+      justify-content: space-between;
-+      gap: 16px;
-+      align-items: center;
-+      margin-bottom: 12px;
-+      flex-wrap: wrap;
-+    }
-+
-+    .goal-header strong {
-+      font-size: 1rem;
-+    }
-+
-+    .goal-header span {
-+      color: var(--muted);
-+      font-size: 0.9rem;
-+    }
-+
-+    .progress-track {
-+      width: 100%;
-+      height: 14px;
-+      background: rgba(30, 41, 59, 0.9);
-+      border-radius: 999px;
-+      overflow: hidden;
-+      margin-bottom: 12px;
-+    }
-+
-+    .progress-fill {
-+      height: 100%;
-+      width: 0;
-+      border-radius: inherit;
-+      background: linear-gradient(90deg, #38bdf8, #22c55e);
-+    }
-+
-+    .goal-meta {
-+      display: flex;
-+      justify-content: space-between;
-+      gap: 14px;
-+      align-items: center;
-+      flex-wrap: wrap;
-+      color: var(--muted);
-+      font-size: 0.92rem;
-+    }
-+
-+    .status {
-+      display: inline-flex;
-+      align-items: center;
-+      padding: 8px 12px;
-+      border-radius: 999px;
-+      font-size: 0.84rem;
-+      font-weight: 700;
-+    }
-+
-+    .status.good {
-+      background: rgba(34, 197, 94, 0.14);
-+      color: #86efac;
-+    }
-+
-+    .status.bad {
-+      background: rgba(251, 113, 133, 0.14);
-+      color: #fda4af;
-+    }
-+
-+    .empty-state {
-+      padding: 18px;
-+      border-radius: 18px;
-+      background: rgba(15, 23, 42, 0.7);
-+      border: 1px dashed rgba(148, 163, 184, 0.18);
-+      color: var(--muted);
-+      line-height: 1.6;
-+    }
-+
-+    @media (max-width: 980px) {
-+      .layout,
-+      .hero {
-+        grid-template-columns: 1fr;
-+      }
-+
-+      .hero-total {
-+        text-align: left;
-+      }
-+    }
-+
-+    @media (max-width: 640px) {
-+      .container {
-+        width: min(100% - 20px, 100%);
-+        padding: 18px 0 28px;
-+      }
-+
-+      .hero,
-+      .card {
-+        padding: 18px;
-+        border-radius: 20px;
-+      }
-+
-+      .nav {
-+        width: 100%;
-+      }
-+
-+      .nav a {
-+        flex: 1 1 calc(50% - 8px);
-+        text-align: center;
-+      }
-+    }
-+  </style>
-+</head>
-+<body>
-+  <div class="container">
-+    <header class="topbar">
-+      <div class="brand">
-+        <h1>FinanceFlow</h1>
-+        <p>Turn your savings into meaningful goals and see whether your current money habits are enough to support them.</p>
-+      </div>
-+      <nav class="nav">
-+        <a href="index.html">Dashboard</a>
-+        <a href="income.html">Income</a>
-+        <a href="expenses.html">Expenses</a>
-+        <a href="savings.html">Savings</a>
-+        <a class="active" href="goals.html">Goals</a>
-+      </nav>
-+    </header>
-+
-+    <section class="hero">
-+      <div>
-+        <div class="hero-tag">Goal planner</div>
-+        <h2>Create savings targets and compare them against your current available savings.</h2>
-+        <p>Each goal uses the shared savings total from your income and expenses, then shows whether you are on track right now.</p>
-+      </div>
-+      <div class="hero-total">
-+        <span>Available Savings</span>
-+        <strong id="hero-savings-total">$0.00</strong>
-+      </div>
-+    </section>
-+
-+    <section class="layout">
-+      <article class="card">
-+        <h3 class="section-title">Add Goal</h3>
-+        <form id="goal-form" class="form-grid">
-+          <label>
-+            Goal Name
-+            <input id="goal-name" type="text" placeholder="Emergency fund, travel, new laptop">
-+          </label>
-+          <label>
-+            Goal Amount
-+            <input id="goal-amount" type="number" min="0" step="0.01" placeholder="0.00">
-+          </label>
-+          <button class="button" type="submit">Save Goal</button>
-+          <div id="goal-message" class="message"></div>
-+        </form>
-+      </article>
-+
-+      <article class="card">
-+        <h3 class="section-title">Goals List</h3>
-+        <div id="goal-list" class="list">
-+          <div class="empty-state">No goals added yet. Add your first goal to track its progress using your savings.</div>
-+        </div>
-+      </article>
-+    </section>
-+  </div>
-+
-+  <script>
-+    const STORAGE_KEY = "financeTrackerData";
-+
-+    function getData() {
-+      const emptyData = { incomes: [], expenses: [], goals: [] };
-+
-+      try {
-+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-+
-+        if (!parsed || typeof parsed !== "object") {
-+          return emptyData;
-+        }
-+
-+        return {
-+          incomes: Array.isArray(parsed.incomes) ? parsed.incomes : [],
-+          expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
-+          goals: Array.isArray(parsed.goals) ? parsed.goals : []
-+        };
-+      } catch (error) {
-+        return emptyData;
-+      }
-+    }
-+
-+    function saveData(data) {
-+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-+    }
-+
-+    function formatCurrency(value) {
-+      return new Intl.NumberFormat("en-US", {
-+        style: "currency",
-+        currency: "USD"
-+      }).format(Number(value) || 0);
-+    }
-+
-+    function calculateTotals(data) {
-+      const totalIncome = data.incomes.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-+      const totalExpenses = data.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-+      const totalSavings = totalIncome - totalExpenses;
-+      const totalGoals = data.goals.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-+
-+      return { totalIncome, totalExpenses, totalSavings, totalGoals };
-+    }
-+
-+    function setMessage(elementId, text, type) {
-+      const message = document.getElementById(elementId);
-+
-+      if (!message) {
-+        return;
-+      }
-+
-+      message.textContent = text;
-+      message.className = `message ${type}`;
-+    }
-+
-+    function addIncome(event) {
-+      if (event) {
-+        event.preventDefault();
-+      }
-+    }
-+
-+    function addExpense(event) {
-+      if (event) {
-+        event.preventDefault();
-+      }
-+    }
-+
-+    function addGoal(event) {
-+      if (event) {
-+        event.preventDefault();
-+      }
-+
-+      const nameInput = document.getElementById("goal-name");
-+      const amountInput = document.getElementById("goal-amount");
-+
-+      const name = nameInput.value.trim();
-+      const amount = Number(amountInput.value);
-+
-+      if (!name || !Number.isFinite(amount) || amount <= 0) {
-+        setMessage("goal-message", "Enter a valid goal name and amount greater than zero.", "error");
-+        return;
-+      }
-+
-+      const data = getData();
-+      data.goals.unshift({
-+        name,
-+        amount,
-+        createdAt: new Date().toISOString()
-+      });
-+
-+      saveData(data);
-+      document.getElementById("goal-form").reset();
-+      setMessage("goal-message", "Goal saved successfully.", "success");
-+      render();
-+    }
-+
-+    function render() {
-+      const data = getData();
-+      const { totalSavings } = calculateTotals(data);
-+      const goalList = document.getElementById("goal-list");
-+
-+      document.getElementById("hero-savings-total").textContent = formatCurrency(totalSavings);
-+
-+      if (!data.goals.length) {
-+        goalList.innerHTML = '<div class="empty-state">No goals added yet. Add your first goal to track its progress using your savings.</div>';
-+        return;
-+      }
-+
-+      goalList.innerHTML = data.goals
-+        .map((goal) => {
-+          const goalAmount = Number(goal.amount) || 0;
-+          const progress = goalAmount > 0 ? Math.max(0, Math.min((totalSavings / goalAmount) * 100, 100)) : 0;
-+          const statusClass = totalSavings >= goalAmount ? "good" : "bad";
-+          const statusText = totalSavings >= goalAmount ? "On Track" : "Not Enough";
-+
-+          return `
-+            <div class="goal-item">
-+              <div class="goal-header">
-+                <div>
-+                  <strong>${goal.name}</strong>
-+                  <span>Target: ${formatCurrency(goalAmount)}</span>
-+                </div>
-+                <div class="status ${statusClass}">${statusText}</div>
-+              </div>
-+              <div class="progress-track">
-+                <div class="progress-fill" style="width: ${progress}%"></div>
-+              </div>
-+              <div class="goal-meta">
-+                <span>${progress.toFixed(1)}% funded from current savings</span>
-+                <span>Current savings: ${formatCurrency(totalSavings)}</span>
-+              </div>
-+            </div>
-+          `;
-+        })
-+        .join("");
-+    }
-+
-+    document.getElementById("goal-form").addEventListener("submit", addGoal);
-+
-+    saveData(getData());
-+    render();
-+  </script>
-+</body>
-+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinanceFlow | Goals</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-badge">FinanceFlow</span>
+        <h1>Financial Goals</h1>
+        <p>Create savings goals and instantly see whether your current savings is enough to support them.</p>
+      </div>
+
+      <nav class="nav">
+        <a href="index.html">Dashboard</a>
+        <a href="income.html">Income</a>
+        <a href="expenses.html">Expenses</a>
+        <a href="savings.html">Savings</a>
+        <a class="active" href="goals.html">Goals</a>
+      </nav>
+    </header>
+
+    <section class="hero hero-goals">
+      <div>
+        <div class="hero-tag">Goal planner</div>
+        <h2>Turn your savings into clear targets.</h2>
+        <p>Each goal uses your current total savings to calculate progress and show a simple On Track or Not Enough status.</p>
+      </div>
+
+      <div class="hero-total">
+        <span>Available Savings</span>
+        <strong id="goal-savings-total">$0.00</strong>
+      </div>
+    </section>
+
+    <section class="grid-2-wide">
+      <article class="card">
+        <h3 class="section-title">Add Goal</h3>
+
+        <form id="goal-form" class="form-grid">
+          <label class="form-field">
+            Goal Name
+            <input class="input" id="goal-name" type="text" placeholder="Emergency fund, vacation, laptop">
+          </label>
+
+          <label class="form-field">
+            Goal Amount
+            <input class="input" id="goal-amount" type="number" min="0" step="0.01" placeholder="0.00">
+          </label>
+
+          <button class="button" type="submit">Save Goal</button>
+          <div id="goal-message" class="message"></div>
+        </form>
+      </article>
+
+      <article class="card">
+        <h3 class="section-title">Goals List</h3>
+
+        <div id="goal-list" class="list">
+          <div class="empty-state">No goals added yet. Add your first goal to track progress using savings.</div>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
