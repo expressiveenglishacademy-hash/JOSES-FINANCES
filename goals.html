@@ -15,7 +15,7 @@
       <div class="brand">
         <span class="brand-badge">FinanceFlow</span>
         <h1>Financial Goals</h1>
-        <p>Create savings goals and instantly see whether your current savings is enough to support them.</p>
+        <p>Create goals with due dates and instantly see how much is available now, how much is still needed, and how much you need to save to hit the target.</p>
       </div>
 
       <nav class="nav">
@@ -30,13 +30,13 @@
     <section class="hero hero-goals">
       <div>
         <div class="hero-tag">Goal planner</div>
-        <h2>Turn your savings into clear targets.</h2>
-        <p>Each goal uses your current total savings to calculate progress and show a simple On Track or Not Enough status.</p>
+        <h2>Plan around real available money and real deadlines.</h2>
+        <p id="goal-available-note">Your current available funds will appear here and update automatically from income minus expenses.</p>
       </div>
 
       <div class="hero-total">
-        <span>Available Savings</span>
-        <strong id="goal-savings-total">$0.00</strong>
+        <span>Available Now</span>
+        <strong id="goal-available-now">$0.00</strong>
       </div>
     </section>
 
@@ -47,12 +47,17 @@
         <form id="goal-form" class="form-grid">
           <label class="form-field">
             Goal Name
-            <input class="input" id="goal-name" type="text" placeholder="Emergency fund, vacation, laptop">
+            <input class="input" id="goal-name" type="text" placeholder="Emergency fund, trip, new laptop">
           </label>
 
           <label class="form-field">
             Goal Amount
             <input class="input" id="goal-amount" type="number" min="0" step="0.01" placeholder="0.00">
+          </label>
+
+          <label class="form-field">
+            Due Date
+            <input class="input" id="goal-due-date" type="date">
           </label>
 
           <button class="button" type="submit">Save Goal</button>
@@ -64,7 +69,7 @@
         <h3 class="section-title">Goals List</h3>
 
         <div id="goal-list" class="list">
-          <div class="empty-state">No goals added yet. Add your first goal to track progress using savings.</div>
+          <div class="empty-state">No goals added yet. Add your first goal to track progress using savings and due dates.</div>
         </div>
       </article>
     </section>
