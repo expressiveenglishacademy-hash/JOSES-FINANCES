@@ -586,6 +586,12 @@ select {
   align-items: center;
 }
 
+.reset-card {
+  margin-top: 18px;
+  border-color: rgba(251, 113, 133, 0.18);
+  background: linear-gradient(135deg, rgba(251, 113, 133, 0.08), rgba(15, 23, 42, 0.92));
+}
+
 @media (max-width: 980px) {
   .hero,
   .grid-2,
