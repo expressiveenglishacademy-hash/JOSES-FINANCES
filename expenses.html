@@ -15,7 +15,7 @@
       <div class="brand">
         <span class="brand-badge">FinanceFlow</span>
         <h1>Expense Tracker</h1>
-        <p>Add fixed and variable expenses, use due dates for fixed bills, mark them as paid, and delete any expense when needed.</p>
+        <p>Add fixed bills, variable expenses, and goal allocations. Goal allocations reduce your available money and credit the selected goal automatically.</p>
       </div>
 
       <nav class="nav">
@@ -30,8 +30,8 @@
     <section class="hero hero-expenses">
       <div>
         <div class="hero-tag">Add expenses</div>
-        <h2>Track fixed bills and variable spending separately.</h2>
-        <p>Fixed expenses stay open until you mark them as paid. Variable expenses are treated as paid immediately.</p>
+        <h2>Track fixed bills, flexible spending, and money allocated to goals.</h2>
+        <p>Fixed expenses stay open until you mark them paid. Goal allocations are counted immediately and attached to the goal you choose.</p>
       </div>
 
       <div class="hero-total">
@@ -40,7 +40,7 @@
       </div>
     </section>
 
-    <section class="stats-grid three">
+    <section class="stats-grid">
       <article class="card">
         <div class="metric-label">Fixed Bills Scheduled</div>
         <p class="metric-value" id="expense-fixed-total">$0.00</p>
@@ -51,6 +51,12 @@
         <div class="metric-label">Variable Expenses</div>
         <p class="metric-value" id="expense-variable-total">$0.00</p>
         <p class="metric-meta">Flexible spending already counted as paid.</p>
+      </article>
+
+      <article class="card">
+        <div class="metric-label">Goal Allocations</div>
+        <p class="metric-value" id="expense-goal-total">$0.00</p>
+        <p class="metric-meta">Money moved out of free cash and into goals.</p>
       </article>
 
       <article class="card">
@@ -67,7 +73,7 @@
         <form id="expense-form" class="form-grid">
           <label class="form-field">
             Expense Name
-            <input class="input" id="expense-name" type="text" placeholder="Rent, groceries, internet">
+            <input class="input" id="expense-name" type="text" placeholder="Rent, groceries, emergency fund transfer">
           </label>
 
           <label class="form-field">
@@ -77,6 +83,7 @@
               <option value="Family">Family</option>
               <option value="Personal">Personal</option>
               <option value="Other">Other</option>
+              <option value="Goals">Goals</option>
             </select>
           </label>
 
@@ -85,7 +92,13 @@
             <select class="select" id="expense-type">
               <option value="Fixed">Fixed</option>
               <option value="Variable">Variable</option>
+              <option value="Goal Allocation">Goal Allocation</option>
             </select>
+          </label>
+
+          <label class="form-field" id="expense-goal-wrap" style="display: none;">
+            Select Goal
+            <select class="select" id="expense-goal-id"></select>
           </label>
 
           <label class="form-field">
@@ -113,7 +126,7 @@
           </div>
 
           <div id="expense-list" class="list">
-            <div class="empty-state">No expenses added yet. Start tracking fixed and variable spending to see your chart and totals.</div>
+            <div class="empty-state">No expenses added yet. Start tracking fixed, variable, and goal allocation entries.</div>
           </div>
         </article>
 
