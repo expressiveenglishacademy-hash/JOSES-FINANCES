@@ -15,7 +15,7 @@
       <div class="brand">
         <span class="brand-badge">FinanceFlow</span>
         <h1>Personal Finance Dashboard</h1>
-        <p>Track your income, expenses, savings, and goals in one clean dark-mode finance app powered by localStorage.</p>
+        <p>Track income, expenses, goals, available funds, and upcoming payments in one place.</p>
       </div>
 
       <nav class="nav">
@@ -31,7 +31,7 @@
       <div>
         <div class="hero-tag">Summary only</div>
         <h2>Your complete financial overview at a glance.</h2>
-        <p>This page is a live summary of your shared data. Add entries from the other pages and everything updates here automatically.</p>
+        <p>This page summarizes your income, paid expenses, savings, goals progress, and open fixed bills that still need attention.</p>
       </div>
     </section>
 
@@ -39,25 +39,25 @@
       <article class="card">
         <div class="metric-label">Total Income</div>
         <p class="metric-value" id="dashboard-income">$0.00</p>
-        <p class="metric-meta">All income entries combined.</p>
+        <p class="metric-meta">All registered income payments.</p>
       </article>
 
       <article class="card">
-        <div class="metric-label">Total Expenses</div>
+        <div class="metric-label">Paid Expenses</div>
         <p class="metric-value" id="dashboard-expenses">$0.00</p>
-        <p class="metric-meta">Every tracked expense across categories.</p>
+        <p class="metric-meta">Only expenses already paid are counted here.</p>
       </article>
 
       <article class="card">
-        <div class="metric-label">Total Savings</div>
+        <div class="metric-label">Net Savings</div>
         <p class="metric-value" id="dashboard-savings">$0.00</p>
-        <p class="metric-meta" id="dashboard-note">Income minus expenses.</p>
+        <p class="metric-meta" id="dashboard-note">Income minus paid expenses.</p>
       </article>
 
       <article class="card">
         <div class="metric-label">Deductions</div>
         <p class="metric-value" id="dashboard-deductions">0%</p>
-        <p class="metric-meta">Percentage of income already spent.</p>
+        <p class="metric-meta">Share of income already spent.</p>
       </article>
     </section>
 
@@ -78,7 +78,7 @@
 
           <div class="bar-row">
             <div class="bar-head">
-              <span>Expenses</span>
+              <span>Paid Expenses</span>
               <span id="dashboard-expense-line">$0.00</span>
             </div>
             <div class="progress-track">
@@ -88,7 +88,7 @@
 
           <div class="bar-row">
             <div class="bar-head">
-              <span>Savings</span>
+              <span>Net Savings</span>
               <span id="dashboard-savings-line">$0.00</span>
             </div>
             <div class="progress-track">
@@ -97,7 +97,7 @@
           </div>
         </div>
 
-        <p class="metric-meta" id="dashboard-summary" style="margin-top: 18px;">Add income and expenses to see your savings pattern.</p>
+        <p class="metric-meta" id="dashboard-summary" style="margin-top: 18px;">Add income and expenses to see your live cash flow.</p>
       </article>
 
       <article class="card">
@@ -109,9 +109,22 @@
         </div>
 
         <div id="dashboard-goal-list" class="list">
-          <div class="empty-state">Your goals will appear here with live progress based on current savings.</div>
+          <div class="empty-state">Your goals will appear here with live progress based on current available funds.</div>
         </div>
       </article>
+    </section>
+
+    <section class="card" style="margin-top: 18px;">
+      <div class="inline-head">
+        <h3 class="section-title" style="margin: 0;">Payment Reminders</h3>
+        <span class="badge" id="dashboard-reminder-count">0 open bills</span>
+      </div>
+
+      <p class="metric-meta" id="dashboard-reminder-meta">Upcoming fixed payments that still need to be marked as paid.</p>
+
+      <div id="dashboard-reminder-list" class="list">
+        <div class="empty-state">No open fixed payments. Once you add fixed expenses with due dates, reminders will appear here.</div>
+      </div>
     </section>
   </div>
 
