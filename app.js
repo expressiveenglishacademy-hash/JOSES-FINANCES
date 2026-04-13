@@ -26,13 +26,6 @@ function setWidth(id, value) {
   }
 }
 
-function setDisplay(id, value) {
-  const el = byId(id);
-  if (el) {
-    el.style.display = value;
-  }
-}
-
 function getEmptyData() {
   return {
     bankBalance: 0,
@@ -197,12 +190,7 @@ function getData() {
       .map((expense) => {
         const type = normalizeExpenseType(expense.type);
         const createdAt = expense.createdAt || new Date().toISOString();
-
-        const isPaid = typeof expense.isPaid === "boolean"
-          ? expense.isPaid
-          : type === "Fixed"
-            ? false
-            : true;
+        const autoPaid = type === "Variable" || type === "Goal Allocation";
 
         return {
           id: expense.id || createId("expense"),
@@ -213,8 +201,12 @@ function getData() {
           goalName: String(expense.goalName || "").trim(),
           dueDate: expense.dueDate || "",
           amount: Number(expense.amount) || 0,
-          isPaid: type === "Fixed" ? isPaid : true,
-          paidAt: expense.paidAt || (type !== "Fixed" ? createdAt : ""),
+          isPaid: autoPaid
+            ? true
+            : typeof expense.isPaid === "boolean"
+              ? expense.isPaid
+              : false,
+          paidAt: expense.paidAt || (autoPaid ? createdAt : ""),
           createdAt
         };
       })
@@ -241,7 +233,8 @@ function initStorage() {
 }
 
 function isExpensePaid(expense) {
-  return normalizeExpenseType(expense.type) === "Fixed" ? Boolean(expense.isPaid) : true;
+  const type = normalizeExpenseType(expense.type);
+  return type === "Fixed" ? Boolean(expense.isPaid) : true;
 }
 
 function getGoalAllocationMap(expenses, goals) {
@@ -557,11 +550,9 @@ function addExpense(event) {
   let goalId = "";
   let goalName = "";
 
-  if (type === "Fixed") {
-    if (!dueDate) {
-      setMessage("expense-message", "Fixed expenses require a due date.", "error");
-      return;
-    }
+  if (type === "Fixed" && !dueDate) {
+    setMessage("expense-message", "Fixed expenses require a due date.", "error");
+    return;
   }
 
   if (type === "Goal Allocation") {
@@ -777,8 +768,10 @@ function renderGoalSelectOptions(data) {
   }
 
   select.disabled = false;
+
   let options = '<option value="">Select a goal</option>';
   options += goals.map((goal) => `<option value="${goal.id}">${escapeHtml(goal.name)}</option>`).join("");
+
   select.innerHTML = options;
 
   if (previousValue && goals.some((goal) => goal.id === previousValue)) {
@@ -846,9 +839,7 @@ function updateExpenseFormState() {
       categoryInput.value = "Goals";
       categoryInput.disabled = true;
     } else {
-      if (categoryInput.disabled) {
-        categoryInput.disabled = false;
-      }
+      categoryInput.disabled = false;
 
       if (categoryInput.value === "Goals") {
         categoryInput.value = "Home & Food";
@@ -868,7 +859,7 @@ function updateExpenseFormState() {
 }
 
 function renderDashboard(data, totals) {
-  if (!byId("dashboard-income") && !byId("dashboard-reminder-list") && !byId("dashboard-goal-list")) {
+  if (!byId("dashboard-income")) {
     return;
   }
 
@@ -876,18 +867,20 @@ function renderDashboard(data, totals) {
   const totalExpenses = totals.totalExpenses;
   const totalGoalAllocated = totals.totalGoalAllocated;
   const netSavings = totals.netSavings;
+  const availableNow = totals.availableNow;
+  const totalGoals = totals.totalGoals;
+
   const deductionsRate = totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : 0;
   const comparisonBase = Math.max(totalIncome, totalExpenses, Math.max(netSavings, 0), 1);
-  const goalCoverage = totals.totalGoals > 0
-    ? Math.max(0, Math.min((totalGoalAllocated / totals.totalGoals) * 100, 100))
+  const goalCoverage = totalGoals > 0
+    ? Math.max(0, Math.min((totalGoalAllocated / totalGoals) * 100, 100))
     : 0;
 
-setText("dashboard-income", formatCurrency(totalIncome));
-setText("dashboard-expenses", formatCurrency(totalExpenses));
-setText("dashboard-savings", formatCurrency(netSavings));
-setText("dashboard-deductions", `${deductionsRate.toFixed(1)}%`);
-setText("dashboard-available-balance", formatCurrency(availableNow));
-
+  setText("dashboard-income", formatCurrency(totalIncome));
+  setText("dashboard-expenses", formatCurrency(totalExpenses));
+  setText("dashboard-savings", formatCurrency(netSavings));
+  setText("dashboard-deductions", `${deductionsRate.toFixed(1)}%`);
+  setText("dashboard-available-balance", formatCurrency(availableNow));
 
   setText("dashboard-income-line", formatCurrency(totalIncome));
   setText("dashboard-expense-line", formatCurrency(totalExpenses));
@@ -899,15 +892,15 @@ setText("dashboard-available-balance", formatCurrency(availableNow));
   setWidth("dashboard-goal-bar", `${goalCoverage}%`);
 
   if (!data.incomes.length && !data.expenses.length) {
-    setText("dashboard-note", "Income minus paid expenses.");
+    setText("dashboard-note", "Income minus paid expenses and allocations.");
     setText("dashboard-summary", "Add your first income and expense entries to unlock your live overview.");
   } else if (netSavings >= 0) {
     const savingsRate = totalIncome > 0 ? Math.max((netSavings / totalIncome) * 100, 0) : 0;
     setText("dashboard-note", `You are keeping ${savingsRate.toFixed(1)}% of your income.`);
-    setText("dashboard-summary", `You are saving ${savingsRate.toFixed(1)}% of your income after paid expenses.`);
+    setText("dashboard-summary", `Current available balance is ${formatCurrency(availableNow)}.`);
   } else {
     setText("dashboard-note", "Paid expenses are currently higher than income.");
-    setText("dashboard-summary", `You are overspending by ${formatCurrency(Math.abs(netSavings))}.`);
+    setText("dashboard-summary", `Current available balance is ${formatCurrency(availableNow)}.`);
   }
 
   const goalList = byId("dashboard-goal-list");
@@ -1044,7 +1037,7 @@ function renderIncomePage(data, totals) {
   const bankNote = byId("bank-balance-note");
   if (bankNote) {
     bankNote.textContent = totals.totalBankBalance > 0
-      ? `Your current bank funds are ${formatCurrency(totals.totalBankBalance)}. This amount is used as your starting available money.`
+      ? `Your current bank funds are ${formatCurrency(totals.totalBankBalance)}. Available balance updates automatically as you receive income or add expenses.`
       : "Add the money you currently have available in your accounts so the app does not start from zero.";
   }
 
