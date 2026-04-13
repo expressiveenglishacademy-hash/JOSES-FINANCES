@@ -1,6 +1,38 @@
 const STORAGE_KEY = "financeTrackerData";
 let expenseChart = null;
 
+function byId(id) {
+  return document.getElementById(id);
+}
+
+function setText(id, value) {
+  const el = byId(id);
+  if (el) {
+    el.textContent = value;
+  }
+}
+
+function setHTML(id, value) {
+  const el = byId(id);
+  if (el) {
+    el.innerHTML = value;
+  }
+}
+
+function setWidth(id, value) {
+  const el = byId(id);
+  if (el) {
+    el.style.width = value;
+  }
+}
+
+function setDisplay(id, value) {
+  const el = byId(id);
+  if (el) {
+    el.style.display = value;
+  }
+}
+
 function getEmptyData() {
   return {
     bankBalance: 0,
@@ -16,7 +48,15 @@ function createId(prefix) {
 }
 
 function normalizeExpenseType(type) {
-  return type === "Fixed" ? "Fixed" : "Variable";
+  if (type === "Fixed") {
+    return "Fixed";
+  }
+
+  if (type === "Goal Allocation") {
+    return "Goal Allocation";
+  }
+
+  return "Variable";
 }
 
 function parseDateValue(value) {
@@ -80,7 +120,7 @@ function escapeHtml(value) {
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
-    '"': "&quot;",
+    "\"": "&quot;",
     "'": "&#39;"
   };
 
@@ -124,6 +164,16 @@ function getData() {
       }))
       .filter((source) => source.name);
 
+    const goals = rawGoals
+      .map((goal) => ({
+        id: goal.id || createId("goal"),
+        name: String(goal.name || "").trim(),
+        amount: Number(goal.amount) || 0,
+        dueDate: goal.dueDate || "",
+        createdAt: goal.createdAt || new Date().toISOString()
+      }))
+      .filter((goal) => goal.name && goal.amount > 0);
+
     const incomes = rawIncomes
       .map((income) => {
         const name = String(income.name || "").trim();
@@ -147,35 +197,28 @@ function getData() {
       .map((expense) => {
         const type = normalizeExpenseType(expense.type);
         const createdAt = expense.createdAt || new Date().toISOString();
-        const isPaid =
-          type === "Variable"
-            ? true
-            : typeof expense.isPaid === "boolean"
-              ? expense.isPaid
-              : true;
+
+        const isPaid = typeof expense.isPaid === "boolean"
+          ? expense.isPaid
+          : type === "Fixed"
+            ? false
+            : true;
 
         return {
           id: expense.id || createId("expense"),
           name: String(expense.name || "").trim(),
           category: String(expense.category || "Other").trim() || "Other",
           type,
+          goalId: expense.goalId || "",
+          goalName: String(expense.goalName || "").trim(),
           dueDate: expense.dueDate || "",
           amount: Number(expense.amount) || 0,
-          isPaid,
-          paidAt: expense.paidAt || (isPaid ? createdAt : ""),
+          isPaid: type === "Fixed" ? isPaid : true,
+          paidAt: expense.paidAt || (type !== "Fixed" ? createdAt : ""),
           createdAt
         };
       })
       .filter((expense) => expense.name && expense.amount > 0);
-
-    const goals = rawGoals
-      .map((goal) => ({
-        name: String(goal.name || "").trim(),
-        amount: Number(goal.amount) || 0,
-        dueDate: goal.dueDate || "",
-        createdAt: goal.createdAt || new Date().toISOString()
-      }))
-      .filter((goal) => goal.name && goal.amount > 0);
 
     return {
       bankBalance: Number.isFinite(Number(parsed.bankBalance)) ? Number(parsed.bankBalance) : 0,
@@ -198,7 +241,34 @@ function initStorage() {
 }
 
 function isExpensePaid(expense) {
-  return normalizeExpenseType(expense.type) === "Variable" ? true : Boolean(expense.isPaid);
+  return normalizeExpenseType(expense.type) === "Fixed" ? Boolean(expense.isPaid) : true;
+}
+
+function getGoalAllocationMap(expenses, goals) {
+  const map = new Map();
+
+  expenses.forEach((expense) => {
+    if (normalizeExpenseType(expense.type) !== "Goal Allocation") {
+      return;
+    }
+
+    let goalId = expense.goalId || "";
+
+    if (!goalId && expense.goalName) {
+      const match = goals.find(
+        (goal) => goal.name.toLowerCase() === String(expense.goalName).toLowerCase()
+      );
+      goalId = match ? match.id : "";
+    }
+
+    if (!goalId) {
+      return;
+    }
+
+    map.set(goalId, (map.get(goalId) || 0) + (Number(expense.amount) || 0));
+  });
+
+  return map;
 }
 
 function getExpenseStatus(expense) {
@@ -207,6 +277,13 @@ function getExpenseStatus(expense) {
   if (type === "Variable") {
     return {
       text: "Paid",
+      className: "status-pill status-good"
+    };
+  }
+
+  if (type === "Goal Allocation") {
+    return {
+      text: "Allocated",
       className: "status-pill status-good"
     };
   }
@@ -260,7 +337,13 @@ function sortExpensesForDisplay(expenses) {
     const bType = normalizeExpenseType(b.type);
 
     if (aType !== bType) {
-      return aType === "Fixed" ? -1 : 1;
+      const order = {
+        "Fixed": 0,
+        "Goal Allocation": 1,
+        "Variable": 2
+      };
+
+      return order[aType] - order[bType];
     }
 
     const aPaid = isExpensePaid(a);
@@ -288,9 +371,15 @@ function sortExpensesForDisplay(expenses) {
 function calculateTotals(data) {
   const totalBankBalance = Number(data.bankBalance) || 0;
   const totalIncome = data.incomes.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
   const totalExpenses = data.expenses.reduce((sum, item) => {
     return sum + (isExpensePaid(item) ? (Number(item.amount) || 0) : 0);
   }, 0);
+
+  const totalGoalAllocated = data.expenses.reduce((sum, item) => {
+    return sum + (normalizeExpenseType(item.type) === "Goal Allocation" ? (Number(item.amount) || 0) : 0);
+  }, 0);
+
   const netSavings = totalIncome - totalExpenses;
   const availableNow = totalBankBalance + netSavings;
   const totalGoals = data.goals.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -299,24 +388,25 @@ function calculateTotals(data) {
     totalBankBalance,
     totalIncome,
     totalExpenses,
+    totalGoalAllocated,
     netSavings,
     availableNow,
     totalGoals
   };
 }
 
-function calculateGoalPlan(goalAmount, availableNow, dueDate) {
+function calculateGoalPlan(goalAmount, allocatedAmount, dueDate) {
   const target = Number(goalAmount) || 0;
-  const available = Math.max(Number(availableNow) || 0, 0);
-  const remaining = Math.max(target - available, 0);
+  const allocated = Math.max(Number(allocatedAmount) || 0, 0);
+  const remaining = Math.max(target - allocated, 0);
   const daysLeft = getDaysUntil(dueDate);
   const monthsLeft = daysLeft !== null && daysLeft > 0 ? Math.max(daysLeft / 30, 1) : null;
   const monthlyNeeded = remaining === 0 ? 0 : monthsLeft ? remaining / monthsLeft : remaining;
-  const progress = target > 0 ? Math.min((available / target) * 100, 100) : 0;
+  const progress = target > 0 ? Math.min((allocated / target) * 100, 100) : 0;
 
   return {
     target,
-    available,
+    allocated,
     remaining,
     daysLeft,
     monthlyNeeded,
@@ -325,7 +415,7 @@ function calculateGoalPlan(goalAmount, availableNow, dueDate) {
 }
 
 function setMessage(id, text, type) {
-  const el = document.getElementById(id);
+  const el = byId(id);
 
   if (!el) {
     return;
@@ -337,7 +427,6 @@ function setMessage(id, text, type) {
 
 function findIncomeSourceByName(data, name) {
   const normalized = String(name || "").trim().toLowerCase();
-
   return data.incomeSources.find((source) => source.name.toLowerCase() === normalized) || null;
 }
 
@@ -364,7 +453,7 @@ function updateBankBalance(event) {
     event.preventDefault();
   }
 
-  const amountInput = document.getElementById("bank-balance-amount");
+  const amountInput = byId("bank-balance-amount");
 
   if (!amountInput) {
     return;
@@ -381,7 +470,7 @@ function updateBankBalance(event) {
   data.bankBalance = amount;
   saveData(data);
 
-  document.getElementById("bank-balance-form")?.reset();
+  byId("bank-balance-form")?.reset();
   setMessage("bank-balance-message", "Current bank funds updated successfully.", "success");
   render();
 }
@@ -391,10 +480,10 @@ function addIncome(event) {
     event.preventDefault();
   }
 
-  const sourceSelect = document.getElementById("income-source-select");
-  const newSourceInput = document.getElementById("income-new-source");
-  const legacyNameInput = document.getElementById("income-name");
-  const amountInput = document.getElementById("income-amount");
+  const sourceSelect = byId("income-source-select");
+  const newSourceInput = byId("income-new-source");
+  const legacyNameInput = byId("income-name");
+  const amountInput = byId("income-amount");
 
   if (!amountInput) {
     return;
@@ -405,8 +494,8 @@ function addIncome(event) {
 
   if (sourceSelect) {
     if (sourceSelect.value && sourceSelect.value !== "__new__") {
-      const source = data.incomeSources.find((item) => item.id === sourceSelect.value);
-      sourceName = source ? source.name : "";
+      const selectedSource = data.incomeSources.find((source) => source.id === sourceSelect.value);
+      sourceName = selectedSource ? selectedSource.name : "";
     } else {
       sourceName = newSourceInput ? newSourceInput.value.trim() : "";
     }
@@ -432,7 +521,7 @@ function addIncome(event) {
   });
 
   saveData(data);
-  document.getElementById("income-form")?.reset();
+  byId("income-form")?.reset();
   setMessage("income-message", "Income saved successfully.", "success");
   render();
 }
@@ -442,50 +531,83 @@ function addExpense(event) {
     event.preventDefault();
   }
 
-  const nameInput = document.getElementById("expense-name");
-  const categoryInput = document.getElementById("expense-category");
-  const typeInput = document.getElementById("expense-type");
-  const dueDateInput = document.getElementById("expense-due-date");
-  const amountInput = document.getElementById("expense-amount");
+  const nameInput = byId("expense-name");
+  const categoryInput = byId("expense-category");
+  const typeInput = byId("expense-type");
+  const goalSelect = byId("expense-goal-id");
+  const dueDateInput = byId("expense-due-date");
+  const amountInput = byId("expense-amount");
 
   if (!nameInput || !categoryInput || !amountInput) {
     return;
   }
 
   const name = nameInput.value.trim();
-  const category = categoryInput.value;
   const type = normalizeExpenseType(typeInput ? typeInput.value : "Variable");
-  const dueDate = dueDateInput ? dueDateInput.value : "";
   const amount = Number(amountInput.value);
 
-  if (!name || !category || !Number.isFinite(amount) || amount <= 0) {
-    setMessage("expense-message", "Enter a valid expense, category, and amount greater than zero.", "error");
+  if (!name || !Number.isFinite(amount) || amount <= 0) {
+    setMessage("expense-message", "Enter a valid expense and amount greater than zero.", "error");
     return;
   }
 
-  if (type === "Fixed" && !dueDate) {
-    setMessage("expense-message", "Fixed expenses require a due date.", "error");
-    return;
+  const data = getData();
+  let category = categoryInput.value || "Other";
+  let dueDate = dueDateInput ? dueDateInput.value : "";
+  let goalId = "";
+  let goalName = "";
+
+  if (type === "Fixed") {
+    if (!dueDate) {
+      setMessage("expense-message", "Fixed expenses require a due date.", "error");
+      return;
+    }
+  }
+
+  if (type === "Goal Allocation") {
+    if (!data.goals.length) {
+      setMessage("expense-message", "Add a goal first before creating a goal allocation.", "error");
+      return;
+    }
+
+    if (!goalSelect || !goalSelect.value) {
+      setMessage("expense-message", "Select a goal for this allocation.", "error");
+      return;
+    }
+
+    const goal = data.goals.find((item) => item.id === goalSelect.value);
+
+    if (!goal) {
+      setMessage("expense-message", "Selected goal was not found.", "error");
+      return;
+    }
+
+    goalId = goal.id;
+    goalName = goal.name;
+    category = "Goals";
+    dueDate = "";
   }
 
   const now = new Date().toISOString();
-  const data = getData();
+  const autoPaid = type === "Variable" || type === "Goal Allocation";
 
   data.expenses.unshift({
     id: createId("expense"),
     name,
     category,
     type,
-    dueDate: type === "Fixed" ? dueDate : "",
+    goalId,
+    goalName,
+    dueDate,
     amount,
-    isPaid: type === "Variable",
-    paidAt: type === "Variable" ? now : "",
+    isPaid: autoPaid,
+    paidAt: autoPaid ? now : "",
     createdAt: now
   });
 
   saveData(data);
-  document.getElementById("expense-form")?.reset();
-  updateExpenseDueDateState();
+  byId("expense-form")?.reset();
+  updateExpenseFormState();
   setMessage("expense-message", "Expense saved successfully.", "success");
   render();
 }
@@ -495,9 +617,9 @@ function addGoal(event) {
     event.preventDefault();
   }
 
-  const nameInput = document.getElementById("goal-name");
-  const amountInput = document.getElementById("goal-amount");
-  const dueDateInput = document.getElementById("goal-due-date");
+  const nameInput = byId("goal-name");
+  const amountInput = byId("goal-amount");
+  const dueDateInput = byId("goal-due-date");
 
   if (!nameInput || !amountInput || !dueDateInput) {
     return;
@@ -515,6 +637,7 @@ function addGoal(event) {
   const data = getData();
 
   data.goals.unshift({
+    id: createId("goal"),
     name,
     amount,
     dueDate,
@@ -522,7 +645,7 @@ function addGoal(event) {
   });
 
   saveData(data);
-  document.getElementById("goal-form")?.reset();
+  byId("goal-form")?.reset();
   setMessage("goal-message", "Goal saved successfully.", "success");
   render();
 }
@@ -613,49 +736,15 @@ function resetFinanceData() {
   window.alert("Finance data has been reset.");
 }
 
-function updateIncomeSourceMode() {
-  const select = document.getElementById("income-source-select");
-  const wrap = document.getElementById("income-new-source-wrap");
-  const input = document.getElementById("income-new-source");
-
-  if (!select || !wrap || !input) {
-    return;
-  }
-
-  const useNew = select.value === "__new__";
-  wrap.style.display = useNew ? "grid" : "none";
-  input.required = useNew;
-
-  if (!useNew) {
-    input.value = "";
-  }
-}
-
-function updateExpenseDueDateState() {
-  const typeInput = document.getElementById("expense-type");
-  const dueDateInput = document.getElementById("expense-due-date");
-  const dueHelp = document.getElementById("expense-due-help");
-
-  if (!typeInput || !dueDateInput || !dueHelp) {
-    return;
-  }
-
-  const isFixed = normalizeExpenseType(typeInput.value) === "Fixed";
-  dueDateInput.required = isFixed;
-  dueHelp.textContent = isFixed
-    ? "Required for fixed expenses. Use the bill due date."
-    : "Optional for variable expenses. Leave blank if it does not apply.";
-}
-
 function renderIncomeSourceSelect(data) {
-  const select = document.getElementById("income-source-select");
+  const select = byId("income-source-select");
 
   if (!select) {
     return;
   }
 
-  const sources = [...data.incomeSources].sort((a, b) => a.name.localeCompare(b.name));
   const previousValue = select.value;
+  const sources = [...data.incomeSources].sort((a, b) => a.name.localeCompare(b.name));
 
   let options = '<option value="__new__">Add new source</option>';
   options += sources.map((source) => `<option value="${source.id}">${escapeHtml(source.name)}</option>`).join("");
@@ -671,78 +760,181 @@ function renderIncomeSourceSelect(data) {
   updateIncomeSourceMode();
 }
 
-function renderDashboard(data, totals) {
-  const incomeEl = document.getElementById("dashboard-income");
+function renderGoalSelectOptions(data) {
+  const select = byId("expense-goal-id");
 
-  if (!incomeEl) {
+  if (!select) {
+    return;
+  }
+
+  const previousValue = select.value;
+  const goals = [...data.goals].sort((a, b) => a.name.localeCompare(b.name));
+
+  if (!goals.length) {
+    select.innerHTML = '<option value="">Add a goal first</option>';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  let options = '<option value="">Select a goal</option>';
+  options += goals.map((goal) => `<option value="${goal.id}">${escapeHtml(goal.name)}</option>`).join("");
+  select.innerHTML = options;
+
+  if (previousValue && goals.some((goal) => goal.id === previousValue)) {
+    select.value = previousValue;
+  }
+}
+
+function updateIncomeSourceMode() {
+  const select = byId("income-source-select");
+  const wrap = byId("income-new-source-wrap");
+  const input = byId("income-new-source");
+
+  if (!select || !wrap || !input) {
+    return;
+  }
+
+  const useNew = select.value === "__new__";
+  wrap.style.display = useNew ? "grid" : "none";
+  input.required = useNew;
+
+  if (!useNew) {
+    input.value = "";
+  }
+}
+
+function updateExpenseFormState() {
+  const typeInput = byId("expense-type");
+  const categoryInput = byId("expense-category");
+  const dueDateInput = byId("expense-due-date");
+  const dueHelp = byId("expense-due-help");
+  const goalWrap = byId("expense-goal-wrap");
+  const goalSelect = byId("expense-goal-id");
+
+  if (!typeInput) {
+    return;
+  }
+
+  const type = normalizeExpenseType(typeInput.value);
+  const isFixed = type === "Fixed";
+  const isGoalAllocation = type === "Goal Allocation";
+
+  if (dueDateInput) {
+    dueDateInput.required = isFixed;
+    dueDateInput.disabled = isGoalAllocation;
+
+    if (isGoalAllocation) {
+      dueDateInput.value = "";
+    }
+  }
+
+  if (goalWrap) {
+    goalWrap.style.display = isGoalAllocation ? "grid" : "none";
+  }
+
+  if (goalSelect) {
+    goalSelect.required = isGoalAllocation;
+
+    if (!isGoalAllocation) {
+      goalSelect.value = "";
+    }
+  }
+
+  if (categoryInput) {
+    if (isGoalAllocation) {
+      categoryInput.value = "Goals";
+      categoryInput.disabled = true;
+    } else {
+      if (categoryInput.disabled) {
+        categoryInput.disabled = false;
+      }
+
+      if (categoryInput.value === "Goals") {
+        categoryInput.value = "Home & Food";
+      }
+    }
+  }
+
+  if (dueHelp) {
+    if (isFixed) {
+      dueHelp.textContent = "Required for fixed expenses. Use the bill due date.";
+    } else if (isGoalAllocation) {
+      dueHelp.textContent = "Goal allocations are credited immediately to the selected goal.";
+    } else {
+      dueHelp.textContent = "Optional for variable expenses. Leave blank if it does not apply.";
+    }
+  }
+}
+
+function renderDashboard(data, totals) {
+  if (!byId("dashboard-income") && !byId("dashboard-reminder-list") && !byId("dashboard-goal-list")) {
     return;
   }
 
   const totalIncome = totals.totalIncome;
   const totalExpenses = totals.totalExpenses;
+  const totalGoalAllocated = totals.totalGoalAllocated;
   const netSavings = totals.netSavings;
-  const availableNow = totals.availableNow;
-  const totalGoals = totals.totalGoals;
-
-  const savingsRate = totalIncome > 0 ? Math.max((netSavings / totalIncome) * 100, 0) : 0;
   const deductionsRate = totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : 0;
   const comparisonBase = Math.max(totalIncome, totalExpenses, Math.max(netSavings, 0), 1);
-  const goalCoverage = totalGoals > 0 ? Math.max(0, Math.min((Math.max(availableNow, 0) / totalGoals) * 100, 100)) : 0;
+  const goalCoverage = totals.totalGoals > 0
+    ? Math.max(0, Math.min((totalGoalAllocated / totals.totalGoals) * 100, 100))
+    : 0;
 
-  document.getElementById("dashboard-income").textContent = formatCurrency(totalIncome);
-  document.getElementById("dashboard-expenses").textContent = formatCurrency(totalExpenses);
-  document.getElementById("dashboard-savings").textContent = formatCurrency(netSavings);
-  document.getElementById("dashboard-deductions").textContent = `${deductionsRate.toFixed(1)}%`;
+  setText("dashboard-income", formatCurrency(totalIncome));
+  setText("dashboard-expenses", formatCurrency(totalExpenses));
+  setText("dashboard-savings", formatCurrency(netSavings));
+  setText("dashboard-deductions", `${deductionsRate.toFixed(1)}%`);
 
-  document.getElementById("dashboard-income-line").textContent = formatCurrency(totalIncome);
-  document.getElementById("dashboard-expense-line").textContent = formatCurrency(totalExpenses);
-  document.getElementById("dashboard-savings-line").textContent = formatCurrency(netSavings);
+  setText("dashboard-income-line", formatCurrency(totalIncome));
+  setText("dashboard-expense-line", formatCurrency(totalExpenses));
+  setText("dashboard-savings-line", formatCurrency(netSavings));
 
-  document.getElementById("dashboard-income-bar").style.width = `${Math.min((totalIncome / comparisonBase) * 100, 100)}%`;
-  document.getElementById("dashboard-expense-bar").style.width = `${Math.min((totalExpenses / comparisonBase) * 100, 100)}%`;
-  document.getElementById("dashboard-savings-bar").style.width = `${Math.min((Math.max(netSavings, 0) / comparisonBase) * 100, 100)}%`;
-  document.getElementById("dashboard-goal-bar").style.width = `${goalCoverage}%`;
+  setWidth("dashboard-income-bar", `${Math.min((totalIncome / comparisonBase) * 100, 100)}%`);
+  setWidth("dashboard-expense-bar", `${Math.min((totalExpenses / comparisonBase) * 100, 100)}%`);
+  setWidth("dashboard-savings-bar", `${Math.min((Math.max(netSavings, 0) / comparisonBase) * 100, 100)}%`);
+  setWidth("dashboard-goal-bar", `${goalCoverage}%`);
 
-  const note = document.getElementById("dashboard-note");
-  const summary = document.getElementById("dashboard-summary");
-  const goalCopy = document.getElementById("dashboard-goal-copy");
-  const goalList = document.getElementById("dashboard-goal-list");
-
-  if (note && summary) {
-    if (!data.incomes.length && !data.expenses.length) {
-      note.textContent = "Income minus paid expenses.";
-      summary.textContent = "Add your first income and expense entries to unlock your live overview.";
-    } else if (netSavings >= 0) {
-      note.textContent = `You are keeping ${savingsRate.toFixed(1)}% of your income.`;
-      summary.textContent = `You are saving ${savingsRate.toFixed(1)}% of your income after paid expenses.`;
-    } else {
-      note.textContent = "Paid expenses are currently higher than income.";
-      summary.textContent = `You are overspending by ${formatCurrency(Math.abs(netSavings))}.`;
-    }
+  if (!data.incomes.length && !data.expenses.length) {
+    setText("dashboard-note", "Income minus paid expenses.");
+    setText("dashboard-summary", "Add your first income and expense entries to unlock your live overview.");
+  } else if (netSavings >= 0) {
+    const savingsRate = totalIncome > 0 ? Math.max((netSavings / totalIncome) * 100, 0) : 0;
+    setText("dashboard-note", `You are keeping ${savingsRate.toFixed(1)}% of your income.`);
+    setText("dashboard-summary", `You are saving ${savingsRate.toFixed(1)}% of your income after paid expenses.`);
+  } else {
+    setText("dashboard-note", "Paid expenses are currently higher than income.");
+    setText("dashboard-summary", `You are overspending by ${formatCurrency(Math.abs(netSavings))}.`);
   }
 
-  if (goalCopy && goalList) {
+  const goalList = byId("dashboard-goal-list");
+  const goalCopy = byId("dashboard-goal-copy");
+
+  if (goalList && goalCopy) {
+    const allocations = getGoalAllocationMap(data.expenses, data.goals);
+
     if (!data.goals.length) {
       goalCopy.textContent = "No goals added yet. Head to the goals page to create your targets.";
-      goalList.innerHTML = '<div class="empty-state">Your goals will appear here with live progress based on current available funds.</div>';
+      goalList.innerHTML = '<div class="empty-state">Your goals will appear here with progress based on allocated money.</div>';
     } else {
-      if (availableNow <= 0) {
-        goalCopy.textContent = "You do not have available funds for goals yet.";
+      if (totalGoalAllocated > 0) {
+        goalCopy.textContent = `You have allocated ${formatCurrency(totalGoalAllocated)} toward your goals.`;
       } else {
-        goalCopy.textContent = `Current available funds cover ${goalCoverage.toFixed(1)}% of your total goal target.`;
+        goalCopy.textContent = "No money has been allocated to goals yet.";
       }
 
       goalList.innerHTML = data.goals.slice(0, 4).map((goal) => {
-        const goalAmount = Number(goal.amount) || 0;
-        const progress = goalAmount > 0 ? Math.max(0, Math.min((Math.max(availableNow, 0) / goalAmount) * 100, 100)) : 0;
+        const allocated = allocations.get(goal.id) || 0;
+        const progress = goal.amount > 0 ? Math.min((allocated / goal.amount) * 100, 100) : 0;
 
         let statusText = "Not Enough";
         let statusClass = "status-bad";
 
-        if (Math.max(availableNow, 0) >= goalAmount) {
+        if (allocated >= goal.amount) {
           statusText = "On Track";
           statusClass = "status-good";
-        } else if (Math.max(availableNow, 0) > 0) {
+        } else if (allocated > 0) {
           statusText = "In Progress";
           statusClass = "status-warn";
         }
@@ -751,7 +943,7 @@ function renderDashboard(data, totals) {
           <div class="list-item">
             <div>
               <strong>${escapeHtml(goal.name)}</strong>
-              <span>${progress.toFixed(1)}% funded</span>
+              <span>${formatCurrency(allocated)} allocated • ${progress.toFixed(1)}% funded</span>
             </div>
             <span class="status-pill ${statusClass}">${statusText}</span>
           </div>
@@ -760,9 +952,9 @@ function renderDashboard(data, totals) {
     }
   }
 
-  const reminderList = document.getElementById("dashboard-reminder-list");
-  const reminderCount = document.getElementById("dashboard-reminder-count");
-  const reminderMeta = document.getElementById("dashboard-reminder-meta");
+  const reminderList = byId("dashboard-reminder-list");
+  const reminderCount = byId("dashboard-reminder-count");
+  const reminderMeta = byId("dashboard-reminder-meta");
 
   if (!reminderList || !reminderCount || !reminderMeta) {
     return;
@@ -834,38 +1026,22 @@ function renderDashboard(data, totals) {
 }
 
 function renderIncomePage(data, totals) {
-  const list = document.getElementById("income-list");
+  const list = byId("income-list");
+  const sourceSummaryEl = byId("income-source-summary");
+  const select = byId("income-source-select");
 
-  if (!list) {
+  if (!list && !sourceSummaryEl && !select) {
     return;
   }
 
-  const totalEl = document.getElementById("income-total");
-  const countEl = document.getElementById("income-count");
-  const bankFundsEl = document.getElementById("income-bank-funds");
-  const availableNowEl = document.getElementById("income-available-now");
-  const bankNoteEl = document.getElementById("bank-balance-note");
-  const sourceCountEl = document.getElementById("income-source-count");
-  const sourceSummaryEl = document.getElementById("income-source-summary");
+  setText("income-total", formatCurrency(totals.totalIncome));
+  setText("income-count", `${data.incomes.length} ${data.incomes.length === 1 ? "entry" : "entries"}`);
+  setText("income-bank-funds", formatCurrency(totals.totalBankBalance));
+  setText("income-available-now", formatCurrency(totals.availableNow));
 
-  if (totalEl) {
-    totalEl.textContent = formatCurrency(totals.totalIncome);
-  }
-
-  if (countEl) {
-    countEl.textContent = `${data.incomes.length} ${data.incomes.length === 1 ? "entry" : "entries"}`;
-  }
-
-  if (bankFundsEl) {
-    bankFundsEl.textContent = formatCurrency(totals.totalBankBalance);
-  }
-
-  if (availableNowEl) {
-    availableNowEl.textContent = formatCurrency(totals.availableNow);
-  }
-
-  if (bankNoteEl) {
-    bankNoteEl.textContent = totals.totalBankBalance > 0
+  const bankNote = byId("bank-balance-note");
+  if (bankNote) {
+    bankNote.textContent = totals.totalBankBalance > 0
       ? `Your current bank funds are ${formatCurrency(totals.totalBankBalance)}. This amount is used as your starting available money.`
       : "Add the money you currently have available in your accounts so the app does not start from zero.";
   }
@@ -916,9 +1092,7 @@ function renderIncomePage(data, totals) {
     return a.name.localeCompare(b.name);
   });
 
-  if (sourceCountEl) {
-    sourceCountEl.textContent = `${data.incomeSources.length} saved`;
-  }
+  setText("income-source-count", `${data.incomeSources.length} saved`);
 
   if (sourceSummaryEl) {
     if (!sourceSummary.length) {
@@ -956,25 +1130,26 @@ function renderIncomePage(data, totals) {
     }
   }
 
-  if (!data.incomes.length) {
-    list.innerHTML = '<div class="empty-state">No income added yet. Add your first income entry to start building your cash flow.</div>';
-    return;
+  if (list) {
+    if (!data.incomes.length) {
+      list.innerHTML = '<div class="empty-state">No income added yet. Add your first income entry to start building your cash flow.</div>';
+    } else {
+      list.innerHTML = data.incomes.map((income) => `
+        <div class="list-item">
+          <div>
+            <strong>${escapeHtml(income.name)}</strong>
+            <span>Received ${formatDate(income.createdAt)}</span>
+          </div>
+          <strong>${formatCurrency(income.amount)}</strong>
+        </div>
+      `).join("");
+    }
   }
-
-  list.innerHTML = data.incomes.map((income) => `
-    <div class="list-item">
-      <div>
-        <strong>${escapeHtml(income.name)}</strong>
-        <span>Received ${formatDate(income.createdAt)}</span>
-      </div>
-      <strong>${formatCurrency(income.amount)}</strong>
-    </div>
-  `).join("");
 }
 
 function renderExpenseChart(expenses) {
-  const canvas = document.getElementById("expense-chart");
-  const emptyState = document.getElementById("expense-chart-empty");
+  const canvas = byId("expense-chart");
+  const emptyState = byId("expense-chart-empty");
 
   if (!canvas || !emptyState) {
     return;
@@ -1021,7 +1196,7 @@ function renderExpenseChart(expenses) {
       datasets: [
         {
           data: Object.values(grouped),
-          backgroundColor: ["#38bdf8", "#fb7185", "#f59e0b", "#22c55e"],
+          backgroundColor: ["#38bdf8", "#fb7185", "#f59e0b", "#22c55e", "#a78bfa"],
           borderColor: "#0f172a",
           borderWidth: 4
         }
@@ -1047,11 +1222,16 @@ function renderExpenseChart(expenses) {
 }
 
 function renderExpensesPage(data, totals) {
-  const list = document.getElementById("expense-list");
+  const list = byId("expense-list");
+  const formExists = byId("expense-form");
+  const goalSelectExists = byId("expense-goal-id");
 
-  if (!list) {
+  if (!list && !formExists && !goalSelectExists) {
     return;
   }
+
+  renderGoalSelectOptions(data);
+  updateExpenseFormState();
 
   const expenses = data.expenses.map((expense) => ({
     ...expense,
@@ -1060,9 +1240,11 @@ function renderExpensesPage(data, totals) {
 
   const fixedExpenses = expenses.filter((expense) => expense.type === "Fixed");
   const variableExpenses = expenses.filter((expense) => expense.type === "Variable");
+  const goalAllocationExpenses = expenses.filter((expense) => expense.type === "Goal Allocation");
 
   const fixedTotal = fixedExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
   const variableTotal = variableExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
+  const goalAllocationTotal = goalAllocationExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
 
   const overdueCount = fixedExpenses.filter((expense) => {
     const days = getDaysUntil(expense.dueDate);
@@ -1074,86 +1256,71 @@ function renderExpensesPage(data, totals) {
     return !isExpensePaid(expense) && days !== null && days >= 0 && days <= 7;
   }).length;
 
-  const totalEl = document.getElementById("expense-total");
-  const countEl = document.getElementById("expense-count");
-  const fixedEl = document.getElementById("expense-fixed-total");
-  const variableEl = document.getElementById("expense-variable-total");
-  const alertTotalEl = document.getElementById("expense-alert-total");
-  const alertMetaEl = document.getElementById("expense-alert-meta");
+  setText("expense-total", formatCurrency(totals.totalExpenses));
+  setText("expense-count", `${expenses.length} ${expenses.length === 1 ? "entry" : "entries"}`);
+  setText("expense-fixed-total", formatCurrency(fixedTotal));
+  setText("expense-variable-total", formatCurrency(variableTotal));
+  setText("expense-goal-total", formatCurrency(goalAllocationTotal));
+  setText("expense-alert-total", `${overdueCount + dueSoonCount}`);
 
-  if (totalEl) {
-    totalEl.textContent = formatCurrency(totals.totalExpenses);
-  }
-
-  if (countEl) {
-    countEl.textContent = `${expenses.length} ${expenses.length === 1 ? "entry" : "entries"}`;
-  }
-
-  if (fixedEl) {
-    fixedEl.textContent = formatCurrency(fixedTotal);
-  }
-
-  if (variableEl) {
-    variableEl.textContent = formatCurrency(variableTotal);
-  }
-
-  if (alertTotalEl) {
-    alertTotalEl.textContent = `${overdueCount + dueSoonCount}`;
-  }
-
-  if (alertMetaEl) {
+  const alertMeta = byId("expense-alert-meta");
+  if (alertMeta) {
     if (!fixedExpenses.length) {
-      alertMetaEl.textContent = "No fixed bills due yet.";
+      alertMeta.textContent = "No fixed bills due yet.";
     } else {
-      alertMetaEl.textContent = `${dueSoonCount} due soon • ${overdueCount} overdue`;
+      alertMeta.textContent = `${dueSoonCount} due soon • ${overdueCount} overdue`;
     }
   }
 
-  if (!expenses.length) {
-    list.innerHTML = '<div class="empty-state">No expenses added yet. Start tracking fixed and variable spending to see your chart and totals.</div>';
-  } else {
-    const sortedExpenses = sortExpensesForDisplay(expenses);
+  if (list) {
+    if (!expenses.length) {
+      list.innerHTML = '<div class="empty-state">No expenses added yet. Start tracking fixed, variable, and goal allocations.</div>';
+    } else {
+      const sortedExpenses = sortExpensesForDisplay(expenses);
 
-    list.innerHTML = sortedExpenses.map((expense) => {
-      const type = normalizeExpenseType(expense.type);
-      const status = getExpenseStatus(expense);
+      list.innerHTML = sortedExpenses.map((expense) => {
+        const type = normalizeExpenseType(expense.type);
+        const status = getExpenseStatus(expense);
 
-      let detailText = `${escapeHtml(expense.category)} • ${type}`;
+        let detailText = `${escapeHtml(expense.category)} • ${type}`;
 
-      if (type === "Fixed" && expense.dueDate) {
-        detailText += ` • Due ${formatDate(expense.dueDate)}`;
-      } else if (type === "Variable") {
-        detailText += ` • Paid ${formatDate(expense.createdAt)}`;
-      }
+        if (type === "Fixed" && expense.dueDate) {
+          detailText += ` • Due ${formatDate(expense.dueDate)}`;
+        } else if (type === "Variable") {
+          detailText += ` • Paid ${formatDate(expense.createdAt)}`;
+        } else if (type === "Goal Allocation") {
+          detailText += ` • ${escapeHtml(expense.goalName || "Goal")} • Allocated ${formatDate(expense.createdAt)}`;
+        }
 
-      if (type === "Fixed" && isExpensePaid(expense) && expense.paidAt) {
-        detailText += ` • Paid ${formatDate(expense.paidAt)}`;
-      }
+        if (type === "Fixed" && isExpensePaid(expense) && expense.paidAt) {
+          detailText += ` • Paid ${formatDate(expense.paidAt)}`;
+        }
 
-      return `
-        <div class="list-item">
-          <div>
-            <strong>${escapeHtml(expense.name)}</strong>
-            <span>${detailText}</span>
-          </div>
-          <div style="text-align: right;">
-            <strong>${formatCurrency(expense.amount)}</strong>
-            <div class="action-row" style="justify-content: flex-end; margin-top: 8px;">
-              <span class="${status.className}">${status.text}</span>
-              ${type === "Fixed" ? `<button type="button" class="button-secondary button-small" onclick="toggleExpensePaid('${expense.id}')">${isExpensePaid(expense) ? "Mark Unpaid" : "Mark Paid"}</button>` : ""}
-              <button type="button" class="button-danger button-small" onclick="deleteExpense('${expense.id}')">Delete</button>
+        return `
+          <div class="list-item">
+            <div>
+              <strong>${escapeHtml(expense.name)}</strong>
+              <span>${detailText}</span>
+            </div>
+            <div style="text-align: right;">
+              <strong>${formatCurrency(expense.amount)}</strong>
+              <div class="action-row" style="justify-content: flex-end; margin-top: 8px;">
+                <span class="${status.className}">${status.text}</span>
+                ${type === "Fixed" ? `<button type="button" class="button-secondary button-small" onclick="toggleExpensePaid('${expense.id}')">${isExpensePaid(expense) ? "Mark Unpaid" : "Mark Paid"}</button>` : ""}
+                <button type="button" class="button-danger button-small" onclick="deleteExpense('${expense.id}')">Delete</button>
+              </div>
             </div>
           </div>
-        </div>
-      `;
-    }).join("");
+        `;
+      }).join("");
+    }
   }
 
   renderExpenseChart(expenses);
 }
 
 function renderSavingsPage(data, totals) {
-  const incomeEl = document.getElementById("savings-income");
+  const incomeEl = byId("savings-income");
 
   if (!incomeEl) {
     return;
@@ -1164,18 +1331,18 @@ function renderSavingsPage(data, totals) {
   const netSavings = totals.netSavings;
   const savingsRate = totalIncome > 0 ? Math.max((netSavings / totalIncome) * 100, 0) : 0;
 
-  document.getElementById("savings-income").textContent = formatCurrency(totalIncome);
-  document.getElementById("savings-expenses").textContent = formatCurrency(totalExpenses);
-  document.getElementById("savings-total").textContent = formatCurrency(netSavings);
-  document.getElementById("savings-rate").textContent = `${savingsRate.toFixed(1)}%`;
-  document.getElementById("savings-progress").style.width = `${Math.min(savingsRate, 100)}%`;
+  setText("savings-income", formatCurrency(totalIncome));
+  setText("savings-expenses", formatCurrency(totalExpenses));
+  setText("savings-total", formatCurrency(netSavings));
+  setText("savings-rate", `${savingsRate.toFixed(1)}%`);
+  setWidth("savings-progress", `${Math.min(savingsRate, 100)}%`);
 
-  const copy = document.getElementById("savings-copy");
-  const suggestion = document.getElementById("savings-suggestion");
-  const status = document.getElementById("savings-status");
-  const tipOne = document.getElementById("tip-one");
-  const tipTwo = document.getElementById("tip-two");
-  const tipThree = document.getElementById("tip-three");
+  const copy = byId("savings-copy");
+  const suggestion = byId("savings-suggestion");
+  const status = byId("savings-status");
+  const tipOne = byId("tip-one");
+  const tipTwo = byId("tip-two");
+  const tipThree = byId("tip-three");
 
   if (!copy || !suggestion || !status || !tipOne || !tipTwo || !tipThree) {
     return;
@@ -1197,7 +1364,7 @@ function renderSavingsPage(data, totals) {
     suggestion.textContent = `You are overspending by ${formatCurrency(Math.abs(netSavings))}.`;
     status.textContent = "Negative savings";
     status.className = "status-pill status-bad";
-    document.getElementById("savings-progress").style.width = "0%";
+    setWidth("savings-progress", "0%");
     tipOne.textContent = "Trim one or two recurring categories to move back into positive savings.";
     tipTwo.textContent = "Even small cuts in flexible spending can help quickly.";
     tipThree.textContent = "Your goals will show better progress as soon as savings becomes positive.";
@@ -1229,37 +1396,36 @@ function renderSavingsPage(data, totals) {
 }
 
 function renderGoalsPage(data, totals) {
-  const list = document.getElementById("goal-list");
+  const list = byId("goal-list");
 
   if (!list) {
     return;
   }
 
+  const allocationMap = getGoalAllocationMap(data.expenses, data.goals);
   const availableNow = Math.max(totals.availableNow, 0);
-  const availableEl = document.getElementById("goal-available-now");
-  const availableNote = document.getElementById("goal-available-note");
 
-  if (availableEl) {
-    availableEl.textContent = formatCurrency(availableNow);
-  }
+  setText("goal-available-now", formatCurrency(availableNow));
 
+  const availableNote = byId("goal-available-note");
   if (availableNote) {
     if (availableNow > 0) {
-      availableNote.textContent = `You currently have ${formatCurrency(availableNow)} available to put toward goals.`;
+      availableNote.textContent = `You currently have ${formatCurrency(availableNow)} available to work with after paid expenses and goal allocations.`;
     } else if (totals.availableNow === 0) {
-      availableNote.textContent = "You do not have extra funds available yet. Add income or reduce expenses to create goal room.";
+      availableNote.textContent = "You do not have extra funds available yet. Add income or reduce expenses to create room.";
     } else {
-      availableNote.textContent = `You are currently behind by ${formatCurrency(Math.abs(totals.availableNow))}, so there are no available funds for goals right now.`;
+      availableNote.textContent = `You are currently behind by ${formatCurrency(Math.abs(totals.availableNow))}, so there are no available funds right now.`;
     }
   }
 
   if (!data.goals.length) {
-    list.innerHTML = '<div class="empty-state">No goals added yet. Add your first goal to track progress using savings and due dates.</div>';
+    list.innerHTML = '<div class="empty-state">No goals added yet. Add your first goal to track allocated money and progress.</div>';
     return;
   }
 
   list.innerHTML = data.goals.map((goal) => {
-    const plan = calculateGoalPlan(goal.amount, availableNow, goal.dueDate);
+    const allocated = allocationMap.get(goal.id) || 0;
+    const plan = calculateGoalPlan(goal.amount, allocated, goal.dueDate);
     const dueText = formatDate(goal.dueDate);
 
     let timeText = "No due date";
@@ -1280,9 +1446,9 @@ function renderGoalsPage(data, totals) {
     if (plan.remaining <= 0) {
       statusText = "On Track";
       statusClass = "status-good";
-    } else if (plan.daysLeft !== null && plan.daysLeft > 0 && plan.monthlyNeeded <= availableNow && availableNow > 0) {
-      statusText = "On Track";
-      statusClass = "status-good";
+    } else if (plan.allocated > 0) {
+      statusText = "In Progress";
+      statusClass = "status-warn";
     }
 
     const saveNowText = plan.remaining <= 0
@@ -1307,8 +1473,8 @@ function renderGoalsPage(data, totals) {
 
         <div class="goal-breakdown">
           <div class="goal-stat">
-            <span>Available Now</span>
-            <strong>${formatCurrency(availableNow)}</strong>
+            <span>Allocated</span>
+            <strong>${formatCurrency(plan.allocated)}</strong>
           </div>
           <div class="goal-stat">
             <span>Still Needed</span>
@@ -1345,13 +1511,13 @@ function render() {
 }
 
 function bindEvents() {
-  const bankBalanceForm = document.getElementById("bank-balance-form");
-  const incomeForm = document.getElementById("income-form");
-  const expenseForm = document.getElementById("expense-form");
-  const goalForm = document.getElementById("goal-form");
-  const expenseType = document.getElementById("expense-type");
-  const incomeSourceSelect = document.getElementById("income-source-select");
-  const resetButton = document.getElementById("reset-finance-button");
+  const bankBalanceForm = byId("bank-balance-form");
+  const incomeForm = byId("income-form");
+  const expenseForm = byId("expense-form");
+  const goalForm = byId("goal-form");
+  const expenseType = byId("expense-type");
+  const incomeSourceSelect = byId("income-source-select");
+  const resetButton = byId("reset-finance-button");
 
   if (bankBalanceForm) {
     bankBalanceForm.addEventListener("submit", updateBankBalance);
@@ -1370,8 +1536,8 @@ function bindEvents() {
   }
 
   if (expenseType) {
-    expenseType.addEventListener("change", updateExpenseDueDateState);
-    updateExpenseDueDateState();
+    expenseType.addEventListener("change", updateExpenseFormState);
+    updateExpenseFormState();
   }
 
   if (incomeSourceSelect) {
