@@ -96,6 +96,96 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => map[char]);
 }
 
+function normalizeExpenseType(type) {
+  return type === "Fixed" ? "Fixed" : "Variable";
+}
+
+function getExpenseStatus(expense) {
+  const type = normalizeExpenseType(expense.type);
+
+  if (type === "Variable") {
+    return {
+      text: "Variable",
+      className: "status-pill status-warn"
+    };
+  }
+
+  if (!expense.dueDate) {
+    return {
+      text: "No Due Date",
+      className: "status-pill status-bad"
+    };
+  }
+
+  const daysLeft = getDaysUntil(expense.dueDate);
+
+  if (daysLeft === null) {
+    return {
+      text: "No Due Date",
+      className: "status-pill status-bad"
+    };
+  }
+
+  if (daysLeft < 0) {
+    return {
+      text: "Overdue",
+      className: "status-pill status-bad"
+    };
+  }
+
+  if (daysLeft === 0) {
+    return {
+      text: "Due Today",
+      className: "status-pill status-warn"
+    };
+  }
+
+  if (daysLeft <= 7) {
+    return {
+      text: "Due Soon",
+      className: "status-pill status-warn"
+    };
+  }
+
+  return {
+    text: "Upcoming",
+    className: "status-pill status-good"
+  };
+}
+
+function sortExpensesForDisplay(expenses) {
+  return [...expenses].sort((a, b) => {
+    const aType = normalizeExpenseType(a.type);
+    const bType = normalizeExpenseType(b.type);
+
+    if (aType !== bType) {
+      return aType === "Fixed" ? -1 : 1;
+    }
+
+    if (aType === "Fixed") {
+      const aDue = parseDateValue(a.dueDate);
+      const bDue = parseDateValue(b.dueDate);
+
+      if (aDue && bDue) {
+        return aDue - bDue;
+      }
+
+      if (aDue) {
+        return -1;
+      }
+
+      if (bDue) {
+        return 1;
+      }
+    }
+
+    const aCreated = parseDateValue(a.createdAt) || new Date(0);
+    const bCreated = parseDateValue(b.createdAt) || new Date(0);
+
+    return bCreated - aCreated;
+  });
+}
+
 function calculateTotals(data) {
   const totalIncome = data.incomes.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   const totalExpenses = data.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -177,18 +267,27 @@ function addExpense(event) {
 
   const nameInput = document.getElementById("expense-name");
   const categoryInput = document.getElementById("expense-category");
+  const typeInput = document.getElementById("expense-type");
+  const dueDateInput = document.getElementById("expense-due-date");
   const amountInput = document.getElementById("expense-amount");
 
-  if (!nameInput || !categoryInput || !amountInput) {
+  if (!nameInput || !categoryInput || !typeInput || !dueDateInput || !amountInput) {
     return;
   }
 
   const name = nameInput.value.trim();
   const category = categoryInput.value;
+  const type = normalizeExpenseType(typeInput.value);
+  const dueDate = dueDateInput.value;
   const amount = Number(amountInput.value);
 
   if (!name || !category || !Number.isFinite(amount) || amount <= 0) {
     setMessage("expense-message", "Enter a valid expense, category, and amount greater than zero.", "error");
+    return;
+  }
+
+  if (type === "Fixed" && !dueDate) {
+    setMessage("expense-message", "Fixed expenses require a due date.", "error");
     return;
   }
 
@@ -197,12 +296,15 @@ function addExpense(event) {
   data.expenses.unshift({
     name,
     category,
+    type,
+    dueDate: type === "Fixed" ? dueDate : "",
     amount,
     createdAt: new Date().toISOString()
   });
 
   saveData(data);
   document.getElementById("expense-form").reset();
+  updateExpenseDueDateState();
   setMessage("expense-message", "Expense saved successfully.", "success");
   render();
 }
@@ -242,6 +344,24 @@ function addGoal(event) {
   document.getElementById("goal-form").reset();
   setMessage("goal-message", "Goal saved successfully.", "success");
   render();
+}
+
+function updateExpenseDueDateState() {
+  const typeInput = document.getElementById("expense-type");
+  const dueDateInput = document.getElementById("expense-due-date");
+  const dueHelp = document.getElementById("expense-due-help");
+
+  if (!typeInput || !dueDateInput || !dueHelp) {
+    return;
+  }
+
+  const type = normalizeExpenseType(typeInput.value);
+  const isFixed = type === "Fixed";
+
+  dueDateInput.required = isFixed;
+  dueHelp.textContent = isFixed
+    ? "Required for fixed expenses. Use the bill due date."
+    : "Optional for variable expenses. Leave blank if it does not apply.";
 }
 
 function renderDashboard(data, totals) {
@@ -435,24 +555,88 @@ function renderExpensesPage(data, totals) {
     return;
   }
 
-  document.getElementById("expense-total").textContent = formatCurrency(totals.totalExpenses);
-  document.getElementById("expense-count").textContent = `${data.expenses.length} ${data.expenses.length === 1 ? "entry" : "entries"}`;
+  const expenses = data.expenses.map((expense) => ({
+    ...expense,
+    type: normalizeExpenseType(expense.type)
+  }));
 
-  if (!data.expenses.length) {
-    list.innerHTML = '<div class="empty-state">No expenses added yet. Start tracking spending to see your chart and totals.</div>';
-  } else {
-    list.innerHTML = data.expenses.map((expense) => `
-      <div class="list-item">
-        <div>
-          <strong>${escapeHtml(expense.name)}</strong>
-          <span>${escapeHtml(expense.category)} • ${formatDate(expense.createdAt)}</span>
-        </div>
-        <strong>${formatCurrency(expense.amount)}</strong>
-      </div>
-    `).join("");
+  const fixedExpenses = expenses.filter((expense) => expense.type === "Fixed");
+  const variableExpenses = expenses.filter((expense) => expense.type === "Variable");
+
+  const fixedTotal = fixedExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
+  const variableTotal = variableExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
+
+  const overdueCount = fixedExpenses.filter((expense) => {
+    const days = getDaysUntil(expense.dueDate);
+    return days !== null && days < 0;
+  }).length;
+
+  const dueSoonCount = fixedExpenses.filter((expense) => {
+    const days = getDaysUntil(expense.dueDate);
+    return days !== null && days >= 0 && days <= 7;
+  }).length;
+
+  document.getElementById("expense-total").textContent = formatCurrency(totals.totalExpenses);
+  document.getElementById("expense-count").textContent = `${expenses.length} ${expenses.length === 1 ? "entry" : "entries"}`;
+
+  const fixedTotalEl = document.getElementById("expense-fixed-total");
+  const variableTotalEl = document.getElementById("expense-variable-total");
+  const alertTotalEl = document.getElementById("expense-alert-total");
+  const alertMetaEl = document.getElementById("expense-alert-meta");
+
+  if (fixedTotalEl) {
+    fixedTotalEl.textContent = formatCurrency(fixedTotal);
   }
 
-  renderExpenseChart(data.expenses);
+  if (variableTotalEl) {
+    variableTotalEl.textContent = formatCurrency(variableTotal);
+  }
+
+  if (alertTotalEl) {
+    alertTotalEl.textContent = `${overdueCount + dueSoonCount}`;
+  }
+
+  if (alertMetaEl) {
+    if (!fixedExpenses.length) {
+      alertMetaEl.textContent = "No fixed bills due yet.";
+    } else {
+      alertMetaEl.textContent = `${dueSoonCount} due soon • ${overdueCount} overdue`;
+    }
+  }
+
+  if (!expenses.length) {
+    list.innerHTML = '<div class="empty-state">No expenses added yet. Start tracking fixed and variable spending to see your chart and totals.</div>';
+  } else {
+    const sortedExpenses = sortExpensesForDisplay(expenses);
+
+    list.innerHTML = sortedExpenses.map((expense) => {
+      const type = normalizeExpenseType(expense.type);
+      const status = getExpenseStatus(expense);
+
+      let detailText = `${escapeHtml(expense.category)} • ${type}`;
+
+      if (type === "Fixed" && expense.dueDate) {
+        detailText += ` • Due ${formatDate(expense.dueDate)}`;
+      } else if (type === "Variable") {
+        detailText += ` • Added ${formatDate(expense.createdAt)}`;
+      }
+
+      return `
+        <div class="list-item">
+          <div>
+            <strong>${escapeHtml(expense.name)}</strong>
+            <span>${detailText}</span>
+          </div>
+          <div style="text-align: right;">
+            <strong>${formatCurrency(expense.amount)}</strong>
+            <span class="${status.className}" style="margin-top: 8px;">${status.text}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  renderExpenseChart(expenses);
 }
 
 function renderSavingsPage(data, totals) {
@@ -649,6 +833,7 @@ function bindEvents() {
   const incomeForm = document.getElementById("income-form");
   const expenseForm = document.getElementById("expense-form");
   const goalForm = document.getElementById("goal-form");
+  const expenseType = document.getElementById("expense-type");
 
   if (incomeForm) {
     incomeForm.addEventListener("submit", addIncome);
@@ -660,6 +845,11 @@ function bindEvents() {
 
   if (goalForm) {
     goalForm.addEventListener("submit", addGoal);
+  }
+
+  if (expenseType) {
+    expenseType.addEventListener("change", updateExpenseDueDateState);
+    updateExpenseDueDateState();
   }
 }
 
