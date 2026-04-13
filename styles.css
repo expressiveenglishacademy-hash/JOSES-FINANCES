@@ -85,7 +85,7 @@ select {
 .brand p {
   margin: 0;
   color: var(--muted);
-  max-width: 720px;
+  max-width: 760px;
   line-height: 1.7;
 }
 
@@ -290,20 +290,56 @@ select {
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
 }
 
-.button {
+.button,
+.button-secondary,
+.button-danger {
   border: none;
   border-radius: var(--radius-sm);
   padding: 14px 18px;
-  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
-  color: #02111f;
   font-weight: 800;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.button {
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  color: #02111f;
+}
+
+.button:hover,
+.button-secondary:hover,
+.button-danger:hover {
+  transform: translateY(-1px);
 }
 
 .button:hover {
-  transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(56, 189, 248, 0.24);
+}
+
+.button-secondary {
+  background: rgba(56, 189, 248, 0.14);
+  color: #bae6fd;
+  border: 1px solid rgba(56, 189, 248, 0.22);
+}
+
+.button-secondary:hover {
+  box-shadow: 0 12px 24px rgba(56, 189, 248, 0.14);
+}
+
+.button-danger {
+  background: rgba(251, 113, 133, 0.14);
+  color: #fecdd3;
+  border: 1px solid rgba(251, 113, 133, 0.2);
+}
+
+.button-danger:hover {
+  box-shadow: 0 12px 24px rgba(251, 113, 133, 0.12);
+}
+
+.button-small {
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .message {
@@ -536,6 +572,20 @@ select {
   flex-wrap: wrap;
 }
 
+.action-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.source-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 @media (max-width: 980px) {
   .hero,
   .grid-2,
@@ -576,9 +626,7 @@ select {
 
   .list-item,
   .goal-head,
-  .goal-meta,
-  .goal-breakdown {
-    grid-template-columns: 1fr;
+  .goal-meta {
     align-items: flex-start;
   }
 
