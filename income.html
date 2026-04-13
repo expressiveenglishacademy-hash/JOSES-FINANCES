@@ -15,7 +15,7 @@
       <div class="brand">
         <span class="brand-badge">FinanceFlow</span>
         <h1>Income Tracker</h1>
-        <p>Add your current bank funds so the app does not start from zero, then keep registering new income as you receive it.</p>
+        <p>Start with your current bank funds, save recurring income sources into a menu, and track total money received from each source.</p>
       </div>
 
       <nav class="nav">
@@ -30,12 +30,12 @@
     <section class="hero hero-income">
       <div>
         <div class="hero-tag">Income and available funds</div>
-        <h2>Start with the money you already have in your accounts.</h2>
-        <p>Your current bank funds are treated as your starting available money, and future income entries are added on top of that.</p>
+        <h2>Start with what you already have and then keep adding new payments.</h2>
+        <p>Your current bank funds act as your starting balance. Saved income sources stay in a dropdown so you can quickly select them next time.</p>
       </div>
 
       <div class="hero-total">
-        <span>Total Registered Income</span>
+        <span>Total Income Received</span>
         <strong id="income-total">$0.00</strong>
       </div>
     </section>
@@ -48,7 +48,7 @@
             <span class="badge">Starting Balance</span>
           </div>
 
-          <p class="subtle" id="bank-balance-note">Add the money you currently have available in your bank accounts so the app does not begin from zero.</p>
+          <p class="subtle" id="bank-balance-note">Add the money you currently have available in your accounts so the app does not start from zero.</p>
 
           <div class="goal-breakdown" style="margin-bottom: 18px;">
             <div class="goal-stat">
@@ -78,8 +78,13 @@
 
           <form id="income-form" class="form-grid">
             <label class="form-field">
-              Income Name
-              <input class="input" id="income-name" type="text" placeholder="Salary, freelance, business">
+              Saved Source
+              <select class="select" id="income-source-select"></select>
+            </label>
+
+            <label class="form-field" id="income-new-source-wrap">
+              New Source Name
+              <input class="input" id="income-new-source" type="text" placeholder="Salary, freelance, business">
             </label>
 
             <label class="form-field">
@@ -93,16 +98,31 @@
         </article>
       </div>
 
-      <article class="card">
-        <div class="inline-head">
-          <h3 class="section-title" style="margin: 0;">Income List</h3>
-          <span class="badge" id="income-count">0 entries</span>
-        </div>
+      <div class="stack">
+        <article class="card">
+          <div class="inline-head">
+            <h3 class="section-title" style="margin: 0;">Income Sources</h3>
+            <span class="badge" id="income-source-count">0 saved</span>
+          </div>
 
-        <div id="income-list" class="list">
-          <div class="empty-state">No income added yet. Add your first income entry to start building your cash flow.</div>
-        </div>
-      </article>
+          <p class="subtle">Delete removes the source from the dropdown menu, but your past income history stays saved.</p>
+
+          <div id="income-source-summary" class="list" style="margin-top: 18px;">
+            <div class="empty-state">No income sources saved yet. Add your first payment source to build the menu.</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="inline-head">
+            <h3 class="section-title" style="margin: 0;">Income History</h3>
+            <span class="badge" id="income-count">0 entries</span>
+          </div>
+
+          <div id="income-list" class="list">
+            <div class="empty-state">No income added yet. Add your first income entry to start building your cash flow.</div>
+          </div>
+        </article>
+      </div>
     </section>
   </div>
 
