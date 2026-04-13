@@ -15,7 +15,7 @@
       <div class="brand">
         <span class="brand-badge">FinanceFlow</span>
         <h1>Income Tracker</h1>
-        <p>Add salary, freelance work, side income, or any source of money coming in.</p>
+        <p>Add your current bank funds so the app does not start from zero, then keep registering new income as you receive it.</p>
       </div>
 
       <nav class="nav">
@@ -29,36 +29,69 @@
 
     <section class="hero hero-income">
       <div>
-        <div class="hero-tag">Add income</div>
-        <h2>Track every income source in one place.</h2>
-        <p>Every income entry updates the dashboard, savings page, and goals page automatically using shared localStorage data.</p>
+        <div class="hero-tag">Income and available funds</div>
+        <h2>Start with the money you already have in your accounts.</h2>
+        <p>Your current bank funds are treated as your starting available money, and future income entries are added on top of that.</p>
       </div>
 
       <div class="hero-total">
-        <span>Total Income</span>
+        <span>Total Registered Income</span>
         <strong id="income-total">$0.00</strong>
       </div>
     </section>
 
     <section class="grid-2-wide">
-      <article class="card">
-        <h3 class="section-title">Add Income</h3>
+      <div class="stack">
+        <article class="card">
+          <div class="inline-head">
+            <h3 class="section-title" style="margin: 0;">Current Bank Funds</h3>
+            <span class="badge">Starting Balance</span>
+          </div>
 
-        <form id="income-form" class="form-grid">
-          <label class="form-field">
-            Income Name
-            <input class="input" id="income-name" type="text" placeholder="Salary, freelance, business">
-          </label>
+          <p class="subtle" id="bank-balance-note">Add the money you currently have available in your bank accounts so the app does not begin from zero.</p>
 
-          <label class="form-field">
-            Amount
-            <input class="input" id="income-amount" type="number" min="0" step="0.01" placeholder="0.00">
-          </label>
+          <div class="goal-breakdown" style="margin-bottom: 18px;">
+            <div class="goal-stat">
+              <span>Bank Funds</span>
+              <strong id="income-bank-funds">$0.00</strong>
+            </div>
 
-          <button class="button" type="submit">Save Income</button>
-          <div id="income-message" class="message"></div>
-        </form>
-      </article>
+            <div class="goal-stat">
+              <span>Available Now</span>
+              <strong id="income-available-now">$0.00</strong>
+            </div>
+          </div>
+
+          <form id="bank-balance-form" class="form-grid">
+            <label class="form-field">
+              Current Total in Accounts
+              <input class="input" id="bank-balance-amount" type="number" min="0" step="0.01" placeholder="0.00">
+            </label>
+
+            <button class="button" type="submit">Update Bank Funds</button>
+            <div id="bank-balance-message" class="message"></div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h3 class="section-title">Add Income</h3>
+
+          <form id="income-form" class="form-grid">
+            <label class="form-field">
+              Income Name
+              <input class="input" id="income-name" type="text" placeholder="Salary, freelance, business">
+            </label>
+
+            <label class="form-field">
+              Amount
+              <input class="input" id="income-amount" type="number" min="0" step="0.01" placeholder="0.00">
+            </label>
+
+            <button class="button" type="submit">Save Income</button>
+            <div id="income-message" class="message"></div>
+          </form>
+        </article>
+      </div>
 
       <article class="card">
         <div class="inline-head">
@@ -67,7 +100,7 @@
         </div>
 
         <div id="income-list" class="list">
-          <div class="empty-state">No income added yet. Add your first entry to start the dashboard.</div>
+          <div class="empty-state">No income added yet. Add your first income entry to start building your cash flow.</div>
         </div>
       </article>
     </section>
