@@ -1,121 +1,22 @@
 const STORAGE_KEY = "financeTrackerData";
 let expenseChart = null;
 
-function createId(prefix) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-}
-
-function normalizeExpenseType(type) {
-  return type === "Fixed" ? "Fixed" : "Variable";
-}
-
-function getData() {
-  const emptyData = {
+function getEmptyData() {
+  return {
     bankBalance: 0,
     incomeSources: [],
     incomes: [],
     expenses: [],
     goals: []
   };
-
-  try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-
-    if (!parsed || typeof parsed !== "object") {
-      return emptyData;
-    }
-
-    const rawIncomes = Array.isArray(parsed.incomes) ? parsed.incomes : [];
-    const rawSources = Array.isArray(parsed.incomeSources) ? parsed.incomeSources : null;
-    const derivedSources = rawSources && rawSources.length
-      ? rawSources
-      : Array.from(
-          new Set(
-            rawIncomes
-              .map((income) => String(income.name || "").trim())
-              .filter(Boolean)
-          )
-        ).map((name) => ({
-          id: createId("source"),
-          name,
-          createdAt: new Date().toISOString()
-        }));
-
-    const incomeSources = derivedSources.map((source) => ({
-      id: source.id || createId("source"),
-      name: String(source.name || "").trim(),
-      createdAt: source.createdAt || new Date().toISOString()
-    })).filter((source) => source.name);
-
-    const incomes = rawIncomes.map((income) => {
-      const name = String(income.name || "").trim();
-      const matchingSource = incomeSources.find(
-        (source) => source.id === income.sourceId || source.name.toLowerCase() === name.toLowerCase()
-      );
-
-      return {
-        id: income.id || createId("income"),
-        sourceId: matchingSource ? matchingSource.id : "",
-        name,
-        amount: Number(income.amount) || 0,
-        createdAt: income.createdAt || new Date().toISOString()
-      };
-    }).filter((income) => income.name && income.amount > 0);
-
-    const expenses = (Array.isArray(parsed.expenses) ? parsed.expenses : []).map((expense) => {
-      const type = normalizeExpenseType(expense.type);
-      const createdAt = expense.createdAt || new Date().toISOString();
-      const isPaid = type === "Variable"
-        ? true
-        : typeof expense.isPaid === "boolean"
-          ? expense.isPaid
-          : true;
-
-      return {
-        id: expense.id || createId("expense"),
-        name: String(expense.name || "").trim(),
-        category: String(expense.category || "Other").trim() || "Other",
-        type,
-        dueDate: expense.dueDate || "",
-        amount: Number(expense.amount) || 0,
-        isPaid,
-        paidAt: expense.paidAt || (isPaid ? createdAt : ""),
-        createdAt
-      };
-    }).filter((expense) => expense.name && expense.amount > 0);
-
-    const goals = (Array.isArray(parsed.goals) ? parsed.goals : []).map((goal) => ({
-      name: String(goal.name || "").trim(),
-      amount: Number(goal.amount) || 0,
-      dueDate: goal.dueDate || "",
-      createdAt: goal.createdAt || new Date().toISOString()
-    })).filter((goal) => goal.name && goal.amount > 0);
-
-    return {
-      bankBalance: Number.isFinite(Number(parsed.bankBalance)) ? Number(parsed.bankBalance) : 0,
-      incomeSources,
-      incomes,
-      expenses,
-      goals
-    };
-  } catch (error) {
-    return emptyData;
-  }
 }
 
-function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+function createId(prefix) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 }
 
-function initStorage() {
-  saveData(getData());
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD"
-  }).format(Number(value) || 0);
+function normalizeExpenseType(type) {
+  return type === "Fixed" ? "Fixed" : "Variable";
 }
 
 function parseDateValue(value) {
@@ -132,6 +33,11 @@ function parseDateValue(value) {
   }
 
   return parsed;
+}
+
+function getTimeValue(value) {
+  const date = parseDateValue(value);
+  return date ? date.getTime() : 0;
 }
 
 function formatDate(value) {
@@ -162,6 +68,13 @@ function getDaysUntil(value) {
   return Math.ceil((due - today) / 86400000);
 }
 
+function formatCurrency(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD"
+  }).format(Number(value) || 0);
+}
+
 function escapeHtml(value) {
   const map = {
     "&": "&amp;",
@@ -172,6 +85,116 @@ function escapeHtml(value) {
   };
 
   return String(value ?? "").replace(/[&<>"']/g, (char) => map[char]);
+}
+
+function getData() {
+  const emptyData = getEmptyData();
+
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+
+    if (!parsed || typeof parsed !== "object") {
+      return emptyData;
+    }
+
+    const rawIncomes = Array.isArray(parsed.incomes) ? parsed.incomes : [];
+    const rawExpenses = Array.isArray(parsed.expenses) ? parsed.expenses : [];
+    const rawGoals = Array.isArray(parsed.goals) ? parsed.goals : [];
+    const rawIncomeSources = Array.isArray(parsed.incomeSources) ? parsed.incomeSources : [];
+
+    const derivedIncomeSources = rawIncomeSources.length
+      ? rawIncomeSources
+      : Array.from(
+          new Set(
+            rawIncomes
+              .map((income) => String(income.name || "").trim())
+              .filter(Boolean)
+          )
+        ).map((name) => ({
+          id: createId("source"),
+          name,
+          createdAt: new Date().toISOString()
+        }));
+
+    const incomeSources = derivedIncomeSources
+      .map((source) => ({
+        id: source.id || createId("source"),
+        name: String(source.name || "").trim(),
+        createdAt: source.createdAt || new Date().toISOString()
+      }))
+      .filter((source) => source.name);
+
+    const incomes = rawIncomes
+      .map((income) => {
+        const name = String(income.name || "").trim();
+        const sourceMatch = incomeSources.find(
+          (source) =>
+            source.id === income.sourceId ||
+            source.name.toLowerCase() === name.toLowerCase()
+        );
+
+        return {
+          id: income.id || createId("income"),
+          sourceId: sourceMatch ? sourceMatch.id : "",
+          name,
+          amount: Number(income.amount) || 0,
+          createdAt: income.createdAt || new Date().toISOString()
+        };
+      })
+      .filter((income) => income.name && income.amount > 0);
+
+    const expenses = rawExpenses
+      .map((expense) => {
+        const type = normalizeExpenseType(expense.type);
+        const createdAt = expense.createdAt || new Date().toISOString();
+        const isPaid =
+          type === "Variable"
+            ? true
+            : typeof expense.isPaid === "boolean"
+              ? expense.isPaid
+              : true;
+
+        return {
+          id: expense.id || createId("expense"),
+          name: String(expense.name || "").trim(),
+          category: String(expense.category || "Other").trim() || "Other",
+          type,
+          dueDate: expense.dueDate || "",
+          amount: Number(expense.amount) || 0,
+          isPaid,
+          paidAt: expense.paidAt || (isPaid ? createdAt : ""),
+          createdAt
+        };
+      })
+      .filter((expense) => expense.name && expense.amount > 0);
+
+    const goals = rawGoals
+      .map((goal) => ({
+        name: String(goal.name || "").trim(),
+        amount: Number(goal.amount) || 0,
+        dueDate: goal.dueDate || "",
+        createdAt: goal.createdAt || new Date().toISOString()
+      }))
+      .filter((goal) => goal.name && goal.amount > 0);
+
+    return {
+      bankBalance: Number.isFinite(Number(parsed.bankBalance)) ? Number(parsed.bankBalance) : 0,
+      incomeSources,
+      incomes,
+      expenses,
+      goals
+    };
+  } catch (error) {
+    return emptyData;
+  }
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function initStorage() {
+  saveData(getData());
 }
 
 function isExpensePaid(expense) {
@@ -248,20 +271,17 @@ function sortExpensesForDisplay(expenses) {
     }
 
     if (aType === "Fixed") {
-      const aDue = getDaysUntil(a.dueDate);
-      const bDue = getDaysUntil(b.dueDate);
-      const aValue = aDue === null ? 999999 : aDue;
-      const bValue = bDue === null ? 999999 : bDue;
+      const aDays = getDaysUntil(a.dueDate);
+      const bDays = getDaysUntil(b.dueDate);
+      const aValue = aDays === null ? 999999 : aDays;
+      const bValue = bDays === null ? 999999 : bDays;
 
       if (aValue !== bValue) {
         return aValue - bValue;
       }
     }
 
-    const aCreated = parseDateValue(a.createdAt) || new Date(0);
-    const bCreated = parseDateValue(b.createdAt) || new Date(0);
-
-    return bCreated - aCreated;
+    return getTimeValue(b.createdAt) - getTimeValue(a.createdAt);
   });
 }
 
@@ -299,7 +319,6 @@ function calculateGoalPlan(goalAmount, availableNow, dueDate) {
     available,
     remaining,
     daysLeft,
-    monthsLeft,
     monthlyNeeded,
     progress
   };
@@ -319,11 +338,12 @@ function setMessage(id, text, type) {
 function findIncomeSourceByName(data, name) {
   const normalized = String(name || "").trim().toLowerCase();
 
-  return data.incomeSources.find((source) => source.name.trim().toLowerCase() === normalized) || null;
+  return data.incomeSources.find((source) => source.name.toLowerCase() === normalized) || null;
 }
 
 function ensureIncomeSource(data, name) {
-  const existing = findIncomeSourceByName(data, name);
+  const trimmedName = String(name || "").trim();
+  const existing = findIncomeSourceByName(data, trimmedName);
 
   if (existing) {
     return existing;
@@ -331,7 +351,7 @@ function ensureIncomeSource(data, name) {
 
   const source = {
     id: createId("source"),
-    name: String(name || "").trim(),
+    name: trimmedName,
     createdAt: new Date().toISOString()
   };
 
@@ -371,8 +391,9 @@ function addIncome(event) {
     event.preventDefault();
   }
 
-  const select = document.getElementById("income-source-select");
+  const sourceSelect = document.getElementById("income-source-select");
   const newSourceInput = document.getElementById("income-new-source");
+  const legacyNameInput = document.getElementById("income-name");
   const amountInput = document.getElementById("income-amount");
 
   if (!amountInput) {
@@ -382,11 +403,15 @@ function addIncome(event) {
   const data = getData();
   let sourceName = "";
 
-  if (select && select.value && select.value !== "__new__") {
-    const selectedSource = data.incomeSources.find((source) => source.id === select.value);
-    sourceName = selectedSource ? selectedSource.name : "";
-  } else if (newSourceInput) {
-    sourceName = newSourceInput.value.trim();
+  if (sourceSelect) {
+    if (sourceSelect.value && sourceSelect.value !== "__new__") {
+      const source = data.incomeSources.find((item) => item.id === sourceSelect.value);
+      sourceName = source ? source.name : "";
+    } else {
+      sourceName = newSourceInput ? newSourceInput.value.trim() : "";
+    }
+  } else {
+    sourceName = legacyNameInput ? legacyNameInput.value.trim() : "";
   }
 
   const amount = Number(amountInput.value);
@@ -423,14 +448,14 @@ function addExpense(event) {
   const dueDateInput = document.getElementById("expense-due-date");
   const amountInput = document.getElementById("expense-amount");
 
-  if (!nameInput || !categoryInput || !typeInput || !dueDateInput || !amountInput) {
+  if (!nameInput || !categoryInput || !amountInput) {
     return;
   }
 
   const name = nameInput.value.trim();
   const category = categoryInput.value;
-  const type = normalizeExpenseType(typeInput.value);
-  const dueDate = dueDateInput.value;
+  const type = normalizeExpenseType(typeInput ? typeInput.value : "Variable");
+  const dueDate = dueDateInput ? dueDateInput.value : "";
   const amount = Number(amountInput.value);
 
   if (!name || !category || !Number.isFinite(amount) || amount <= 0) {
@@ -565,6 +590,29 @@ function deleteExpense(expenseId) {
   render();
 }
 
+function resetFinanceData() {
+  const code = window.prompt("Enter reset code to erase all finance data:");
+
+  if (code === null) {
+    return;
+  }
+
+  if (code !== "8681") {
+    window.alert("Incorrect reset code.");
+    return;
+  }
+
+  const confirmed = window.confirm("This will delete all finance data. Continue?");
+
+  if (!confirmed) {
+    return;
+  }
+
+  saveData(getEmptyData());
+  render();
+  window.alert("Finance data has been reset.");
+}
+
 function updateIncomeSourceMode() {
   const select = document.getElementById("income-source-select");
   const wrap = document.getElementById("income-new-source-wrap");
@@ -593,7 +641,6 @@ function updateExpenseDueDateState() {
   }
 
   const isFixed = normalizeExpenseType(typeInput.value) === "Fixed";
-
   dueDateInput.required = isFixed;
   dueHelp.textContent = isFixed
     ? "Required for fixed expenses. Use the bill due date."
@@ -661,52 +708,56 @@ function renderDashboard(data, totals) {
   const goalCopy = document.getElementById("dashboard-goal-copy");
   const goalList = document.getElementById("dashboard-goal-list");
 
-  if (!data.incomes.length && !data.expenses.length) {
-    note.textContent = "Income minus paid expenses.";
-    summary.textContent = "Add your first income and expense entries to unlock your live overview.";
-  } else if (netSavings >= 0) {
-    note.textContent = `You are keeping ${savingsRate.toFixed(1)}% of your income.`;
-    summary.textContent = `You are saving ${savingsRate.toFixed(1)}% of your income after paid expenses.`;
-  } else {
-    note.textContent = "Paid expenses are currently higher than income.";
-    summary.textContent = `You are overspending by ${formatCurrency(Math.abs(netSavings))}.`;
+  if (note && summary) {
+    if (!data.incomes.length && !data.expenses.length) {
+      note.textContent = "Income minus paid expenses.";
+      summary.textContent = "Add your first income and expense entries to unlock your live overview.";
+    } else if (netSavings >= 0) {
+      note.textContent = `You are keeping ${savingsRate.toFixed(1)}% of your income.`;
+      summary.textContent = `You are saving ${savingsRate.toFixed(1)}% of your income after paid expenses.`;
+    } else {
+      note.textContent = "Paid expenses are currently higher than income.";
+      summary.textContent = `You are overspending by ${formatCurrency(Math.abs(netSavings))}.`;
+    }
   }
 
-  if (!data.goals.length) {
-    goalCopy.textContent = "No goals added yet. Head to the goals page to create your targets.";
-    goalList.innerHTML = '<div class="empty-state">Your goals will appear here with live progress based on current available funds.</div>';
-  } else {
-    if (availableNow <= 0) {
-      goalCopy.textContent = "You do not have available funds for goals yet.";
+  if (goalCopy && goalList) {
+    if (!data.goals.length) {
+      goalCopy.textContent = "No goals added yet. Head to the goals page to create your targets.";
+      goalList.innerHTML = '<div class="empty-state">Your goals will appear here with live progress based on current available funds.</div>';
     } else {
-      goalCopy.textContent = `Current available funds cover ${goalCoverage.toFixed(1)}% of your total goal target.`;
-    }
-
-    goalList.innerHTML = data.goals.slice(0, 4).map((goal) => {
-      const goalAmount = Number(goal.amount) || 0;
-      const progress = goalAmount > 0 ? Math.max(0, Math.min((Math.max(availableNow, 0) / goalAmount) * 100, 100)) : 0;
-
-      let statusText = "Not Enough";
-      let statusClass = "status-bad";
-
-      if (Math.max(availableNow, 0) >= goalAmount) {
-        statusText = "On Track";
-        statusClass = "status-good";
-      } else if (Math.max(availableNow, 0) > 0) {
-        statusText = "In Progress";
-        statusClass = "status-warn";
+      if (availableNow <= 0) {
+        goalCopy.textContent = "You do not have available funds for goals yet.";
+      } else {
+        goalCopy.textContent = `Current available funds cover ${goalCoverage.toFixed(1)}% of your total goal target.`;
       }
 
-      return `
-        <div class="list-item">
-          <div>
-            <strong>${escapeHtml(goal.name)}</strong>
-            <span>${progress.toFixed(1)}% funded</span>
+      goalList.innerHTML = data.goals.slice(0, 4).map((goal) => {
+        const goalAmount = Number(goal.amount) || 0;
+        const progress = goalAmount > 0 ? Math.max(0, Math.min((Math.max(availableNow, 0) / goalAmount) * 100, 100)) : 0;
+
+        let statusText = "Not Enough";
+        let statusClass = "status-bad";
+
+        if (Math.max(availableNow, 0) >= goalAmount) {
+          statusText = "On Track";
+          statusClass = "status-good";
+        } else if (Math.max(availableNow, 0) > 0) {
+          statusText = "In Progress";
+          statusClass = "status-warn";
+        }
+
+        return `
+          <div class="list-item">
+            <div>
+              <strong>${escapeHtml(goal.name)}</strong>
+              <span>${progress.toFixed(1)}% funded</span>
+            </div>
+            <span class="status-pill ${statusClass}">${statusText}</span>
           </div>
-          <span class="status-pill ${statusClass}">${statusText}</span>
-        </div>
-      `;
-    }).join("");
+        `;
+      }).join("");
+    }
   }
 
   const reminderList = document.getElementById("dashboard-reminder-list");
@@ -789,14 +840,21 @@ function renderIncomePage(data, totals) {
     return;
   }
 
-  document.getElementById("income-total").textContent = formatCurrency(totals.totalIncome);
-  document.getElementById("income-count").textContent = `${data.incomes.length} ${data.incomes.length === 1 ? "entry" : "entries"}`;
-
+  const totalEl = document.getElementById("income-total");
+  const countEl = document.getElementById("income-count");
   const bankFundsEl = document.getElementById("income-bank-funds");
   const availableNowEl = document.getElementById("income-available-now");
   const bankNoteEl = document.getElementById("bank-balance-note");
   const sourceCountEl = document.getElementById("income-source-count");
   const sourceSummaryEl = document.getElementById("income-source-summary");
+
+  if (totalEl) {
+    totalEl.textContent = formatCurrency(totals.totalIncome);
+  }
+
+  if (countEl) {
+    countEl.textContent = `${data.incomes.length} ${data.incomes.length === 1 ? "entry" : "entries"}`;
+  }
 
   if (bankFundsEl) {
     bankFundsEl.textContent = formatCurrency(totals.totalBankBalance);
@@ -833,7 +891,7 @@ function renderIncomePage(data, totals) {
     item.total += Number(income.amount) || 0;
     item.count += 1;
 
-    if (parseDateValue(income.createdAt) > parseDateValue(item.lastPayment)) {
+    if (getTimeValue(income.createdAt) > getTimeValue(item.lastPayment)) {
       item.lastPayment = income.createdAt;
     }
   });
@@ -887,7 +945,6 @@ function renderIncomePage(data, totals) {
                 <span>Total Received</span>
                 <strong>${formatCurrency(source.total)}</strong>
               </div>
-
               <div class="goal-stat">
                 <span>Last Payment</span>
                 <strong>${source.lastPayment ? formatDate(source.lastPayment) : "No payments yet"}</strong>
@@ -1003,6 +1060,7 @@ function renderExpensesPage(data, totals) {
 
   const fixedExpenses = expenses.filter((expense) => expense.type === "Fixed");
   const variableExpenses = expenses.filter((expense) => expense.type === "Variable");
+
   const fixedTotal = fixedExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
   const variableTotal = variableExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
 
@@ -1016,20 +1074,27 @@ function renderExpensesPage(data, totals) {
     return !isExpensePaid(expense) && days !== null && days >= 0 && days <= 7;
   }).length;
 
-  document.getElementById("expense-total").textContent = formatCurrency(totals.totalExpenses);
-  document.getElementById("expense-count").textContent = `${expenses.length} ${expenses.length === 1 ? "entry" : "entries"}`;
-
-  const fixedTotalEl = document.getElementById("expense-fixed-total");
-  const variableTotalEl = document.getElementById("expense-variable-total");
+  const totalEl = document.getElementById("expense-total");
+  const countEl = document.getElementById("expense-count");
+  const fixedEl = document.getElementById("expense-fixed-total");
+  const variableEl = document.getElementById("expense-variable-total");
   const alertTotalEl = document.getElementById("expense-alert-total");
   const alertMetaEl = document.getElementById("expense-alert-meta");
 
-  if (fixedTotalEl) {
-    fixedTotalEl.textContent = formatCurrency(fixedTotal);
+  if (totalEl) {
+    totalEl.textContent = formatCurrency(totals.totalExpenses);
   }
 
-  if (variableTotalEl) {
-    variableTotalEl.textContent = formatCurrency(variableTotal);
+  if (countEl) {
+    countEl.textContent = `${expenses.length} ${expenses.length === 1 ? "entry" : "entries"}`;
+  }
+
+  if (fixedEl) {
+    fixedEl.textContent = formatCurrency(fixedTotal);
+  }
+
+  if (variableEl) {
+    variableEl.textContent = formatCurrency(variableTotal);
   }
 
   if (alertTotalEl) {
@@ -1111,6 +1176,10 @@ function renderSavingsPage(data, totals) {
   const tipOne = document.getElementById("tip-one");
   const tipTwo = document.getElementById("tip-two");
   const tipThree = document.getElementById("tip-three");
+
+  if (!copy || !suggestion || !status || !tipOne || !tipTwo || !tipThree) {
+    return;
+  }
 
   if (totalIncome === 0) {
     copy.textContent = "Add income first to calculate a savings percentage.";
@@ -1194,6 +1263,7 @@ function renderGoalsPage(data, totals) {
     const dueText = formatDate(goal.dueDate);
 
     let timeText = "No due date";
+
     if (plan.daysLeft !== null) {
       if (plan.daysLeft < 0) {
         timeText = `${Math.abs(plan.daysLeft)} days overdue`;
@@ -1240,17 +1310,14 @@ function renderGoalsPage(data, totals) {
             <span>Available Now</span>
             <strong>${formatCurrency(availableNow)}</strong>
           </div>
-
           <div class="goal-stat">
             <span>Still Needed</span>
             <strong>${formatCurrency(plan.remaining)}</strong>
           </div>
-
           <div class="goal-stat">
             <span>Due Date</span>
             <strong>${dueText}</strong>
           </div>
-
           <div class="goal-stat">
             <span>Need To Save</span>
             <strong>${saveNowText}</strong>
@@ -1278,12 +1345,13 @@ function render() {
 }
 
 function bindEvents() {
+  const bankBalanceForm = document.getElementById("bank-balance-form");
   const incomeForm = document.getElementById("income-form");
   const expenseForm = document.getElementById("expense-form");
   const goalForm = document.getElementById("goal-form");
   const expenseType = document.getElementById("expense-type");
-  const bankBalanceForm = document.getElementById("bank-balance-form");
   const incomeSourceSelect = document.getElementById("income-source-select");
+  const resetButton = document.getElementById("reset-finance-button");
 
   if (bankBalanceForm) {
     bankBalanceForm.addEventListener("submit", updateBankBalance);
@@ -1310,11 +1378,16 @@ function bindEvents() {
     incomeSourceSelect.addEventListener("change", updateIncomeSourceMode);
     updateIncomeSourceMode();
   }
+
+  if (resetButton) {
+    resetButton.addEventListener("click", resetFinanceData);
+  }
 }
 
 window.deleteIncomeSource = deleteIncomeSource;
 window.toggleExpensePaid = toggleExpensePaid;
 window.deleteExpense = deleteExpense;
+window.resetFinanceData = resetFinanceData;
 
 document.addEventListener("DOMContentLoaded", () => {
   initStorage();
