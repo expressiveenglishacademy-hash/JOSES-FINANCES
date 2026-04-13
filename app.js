@@ -361,7 +361,7 @@ function updateBankBalance(event) {
   data.bankBalance = amount;
   saveData(data);
 
-  document.getElementById("bank-balance-form").reset();
+  document.getElementById("bank-balance-form")?.reset();
   setMessage("bank-balance-message", "Current bank funds updated successfully.", "success");
   render();
 }
@@ -407,7 +407,7 @@ function addIncome(event) {
   });
 
   saveData(data);
-  document.getElementById("income-form").reset();
+  document.getElementById("income-form")?.reset();
   setMessage("income-message", "Income saved successfully.", "success");
   render();
 }
@@ -459,7 +459,7 @@ function addExpense(event) {
   });
 
   saveData(data);
-  document.getElementById("expense-form").reset();
+  document.getElementById("expense-form")?.reset();
   updateExpenseDueDateState();
   setMessage("expense-message", "Expense saved successfully.", "success");
   render();
@@ -497,7 +497,7 @@ function addGoal(event) {
   });
 
   saveData(data);
-  document.getElementById("goal-form").reset();
+  document.getElementById("goal-form")?.reset();
   setMessage("goal-message", "Goal saved successfully.", "success");
   render();
 }
@@ -542,6 +542,25 @@ function toggleExpensePaid(expenseId) {
     };
   });
 
+  saveData(data);
+  render();
+}
+
+function deleteExpense(expenseId) {
+  const data = getData();
+  const expense = data.expenses.find((item) => item.id === expenseId);
+
+  if (!expense) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete expense "${expense.name}"?`);
+
+  if (!confirmed) {
+    return;
+  }
+
+  data.expenses = data.expenses.filter((item) => item.id !== expenseId);
   saveData(data);
   render();
 }
@@ -755,6 +774,7 @@ function renderDashboard(data, totals) {
           <div class="action-row" style="justify-content: flex-end; margin-top: 8px;">
             <span class="${status.className}">${status.text}</span>
             <button type="button" class="button-secondary button-small" onclick="toggleExpensePaid('${expense.id}')">Mark Paid</button>
+            <button type="button" class="button-danger button-small" onclick="deleteExpense('${expense.id}')">Delete</button>
           </div>
         </div>
       </div>
@@ -1056,6 +1076,7 @@ function renderExpensesPage(data, totals) {
             <div class="action-row" style="justify-content: flex-end; margin-top: 8px;">
               <span class="${status.className}">${status.text}</span>
               ${type === "Fixed" ? `<button type="button" class="button-secondary button-small" onclick="toggleExpensePaid('${expense.id}')">${isExpensePaid(expense) ? "Mark Unpaid" : "Mark Paid"}</button>` : ""}
+              <button type="button" class="button-danger button-small" onclick="deleteExpense('${expense.id}')">Delete</button>
             </div>
           </div>
         </div>
@@ -1293,6 +1314,7 @@ function bindEvents() {
 
 window.deleteIncomeSource = deleteIncomeSource;
 window.toggleExpensePaid = toggleExpensePaid;
+window.deleteExpense = deleteExpense;
 
 document.addEventListener("DOMContentLoaded", () => {
   initStorage();
