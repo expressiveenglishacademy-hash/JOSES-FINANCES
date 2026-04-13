@@ -15,7 +15,7 @@
       <div class="brand">
         <span class="brand-badge">FinanceFlow</span>
         <h1>Expense Tracker</h1>
-        <p>Add fixed expenses, variable expenses, and goal allocations. When you choose <strong>Goal Allocation</strong>, your goals will appear in a dropdown and the money will be reflected there.</p>
+        <p>Add fixed expenses, variable expenses, and goal allocations. Fixed expenses can also repeat every 2 weeks.</p>
       </div>
 
       <nav class="nav">
@@ -44,7 +44,7 @@
       <article class="card">
         <div class="metric-label">Fixed Bills</div>
         <p class="metric-value" id="expense-fixed-total">$0.00</p>
-        <p class="metric-meta">Registered recurring bills.</p>
+        <p class="metric-meta">Registered fixed expenses.</p>
       </article>
 
       <article class="card">
@@ -56,7 +56,7 @@
       <article class="card">
         <div class="metric-label">Goal Allocations</div>
         <p class="metric-value" id="expense-goal-total">$0.00</p>
-        <p class="metric-meta">Money reserved toward savings goals.</p>
+        <p class="metric-meta">Money reserved toward goals.</p>
       </article>
 
       <article class="card">
@@ -103,12 +103,20 @@
             </select>
           </label>
 
+          <label class="form-field" id="expense-recurrence-wrap">
+            Recurrence
+            <select class="select" id="expense-recurrence">
+              <option value="None">One Time</option>
+              <option value="Every 2 Weeks">Every 2 Weeks</option>
+            </select>
+          </label>
+
           <label class="form-field">
             Due Date
             <input class="input" id="expense-due-date" type="date">
           </label>
 
-          <p class="subtle" id="expense-due-help">Required for fixed expenses. Optional for variable expenses.</p>
+          <p class="subtle" id="expense-due-help">Required for fixed expenses. You can also mark them as recurring every 2 weeks.</p>
 
           <label class="form-field">
             Amount
