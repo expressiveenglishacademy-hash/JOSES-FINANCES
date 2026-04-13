@@ -15,7 +15,7 @@
       <div class="brand">
         <span class="brand-badge">FinanceFlow</span>
         <h1>Expense Tracker</h1>
-        <p>Track spending by category and visualize it with a pie chart powered by Chart.js.</p>
+        <p>Track fixed expenses with due dates and variable expenses separately so you can control your cash flow better.</p>
       </div>
 
       <nav class="nav">
@@ -30,14 +30,34 @@
     <section class="hero hero-expenses">
       <div>
         <div class="hero-tag">Add expenses</div>
-        <h2>Log spending and see where your money goes.</h2>
-        <p>Expenses are grouped into Home & Food, Family, Personal, and Other, then displayed in a live category chart.</p>
+        <h2>Separate fixed bills from variable spending.</h2>
+        <p>Fixed expenses can include due dates, while variable expenses help you track flexible spending like food, shopping, and everyday purchases.</p>
       </div>
 
       <div class="hero-total">
         <span>Total Expenses</span>
         <strong id="expense-total">$0.00</strong>
       </div>
+    </section>
+
+    <section class="stats-grid three">
+      <article class="card">
+        <div class="metric-label">Fixed Expenses</div>
+        <p class="metric-value" id="expense-fixed-total">$0.00</p>
+        <p class="metric-meta">Bills and recurring payments with due dates.</p>
+      </article>
+
+      <article class="card">
+        <div class="metric-label">Variable Expenses</div>
+        <p class="metric-value" id="expense-variable-total">$0.00</p>
+        <p class="metric-meta">Flexible spending without a fixed payment date.</p>
+      </article>
+
+      <article class="card">
+        <div class="metric-label">Payment Alerts</div>
+        <p class="metric-value" id="expense-alert-total">0</p>
+        <p class="metric-meta" id="expense-alert-meta">No fixed bills due yet.</p>
+      </article>
     </section>
 
     <section class="grid-2-wide">
@@ -61,6 +81,21 @@
           </label>
 
           <label class="form-field">
+            Expense Type
+            <select class="select" id="expense-type">
+              <option value="Fixed">Fixed</option>
+              <option value="Variable">Variable</option>
+            </select>
+          </label>
+
+          <label class="form-field">
+            Due Date
+            <input class="input" id="expense-due-date" type="date">
+          </label>
+
+          <p class="subtle" id="expense-due-help">Required for fixed expenses. Optional for variable expenses.</p>
+
+          <label class="form-field">
             Amount
             <input class="input" id="expense-amount" type="number" min="0" step="0.01" placeholder="0.00">
           </label>
@@ -78,7 +113,7 @@
           </div>
 
           <div id="expense-list" class="list">
-            <div class="empty-state">No expenses added yet. Start tracking spending to see your chart and totals.</div>
+            <div class="empty-state">No expenses added yet. Start tracking fixed and variable spending to see your chart and totals.</div>
           </div>
         </article>
 
