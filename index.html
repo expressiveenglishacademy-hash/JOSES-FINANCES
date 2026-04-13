@@ -15,7 +15,7 @@
       <div class="brand">
         <span class="brand-badge">FinanceFlow</span>
         <h1>Personal Finance Dashboard</h1>
-        <p>Track income, paid expenses, savings, goals, and open fixed bills in one place.</p>
+        <p>Track income, expenses, goal allocations, savings, and upcoming bills in one place.</p>
       </div>
 
       <nav class="nav">
@@ -31,7 +31,7 @@
       <div>
         <div class="hero-tag">Summary only</div>
         <h2>Your complete financial overview at a glance.</h2>
-        <p>This page summarizes income, paid expenses, goals progress, and fixed bills that are still open.</p>
+        <p>This page summarizes your registered income, paid expenses, current savings, goal funding progress, and unpaid fixed bills.</p>
       </div>
     </section>
 
@@ -45,7 +45,7 @@
       <article class="card">
         <div class="metric-label">Paid Expenses</div>
         <p class="metric-value" id="dashboard-expenses">$0.00</p>
-        <p class="metric-meta">Only expenses already marked as paid.</p>
+        <p class="metric-meta">Includes variable, paid fixed bills, and goal allocations.</p>
       </article>
 
       <article class="card">
@@ -57,7 +57,7 @@
       <article class="card">
         <div class="metric-label">Deductions</div>
         <p class="metric-value" id="dashboard-deductions">0%</p>
-        <p class="metric-meta">Share of income already spent.</p>
+        <p class="metric-meta">Share of income already used.</p>
       </article>
     </section>
 
@@ -101,7 +101,7 @@
       </article>
 
       <article class="card">
-        <h3 class="section-title">Goals Readiness</h3>
+        <h3 class="section-title">Goals Funding</h3>
         <p class="metric-meta" id="dashboard-goal-copy">No goals added yet. Head to the goals page to create your targets.</p>
 
         <div class="progress-track large" style="margin: 18px 0;">
@@ -109,7 +109,7 @@
         </div>
 
         <div id="dashboard-goal-list" class="list">
-          <div class="empty-state">Your goals will appear here with live progress based on current available funds.</div>
+          <div class="empty-state">Your goals will appear here with progress based on money allocated to each goal.</div>
         </div>
       </article>
     </section>
@@ -127,16 +127,14 @@
       </div>
     </section>
 
-    <section class="card reset-card">
+    <section class="card" style="margin-top: 18px;">
       <div class="inline-head">
         <h3 class="section-title" style="margin: 0;">Reset Finance Data</h3>
-        <span class="status-pill status-bad">Code Required</span>
+        <span class="status-pill status-bad">Code 8681</span>
       </div>
-
-      <p class="metric-meta">This resets the whole app: bank funds, income, expenses, goals, and saved income sources. To reset, you must enter the code <strong>8681</strong>.</p>
-
-      <div class="action-row" style="margin-top: 18px;">
-        <button type="button" class="button-danger" onclick="resetFinanceData()">Reset Everything</button>
+      <p class="metric-meta">This clears bank funds, income sources, incomes, expenses, and goals.</p>
+      <div class="action-row" style="margin-top: 16px;">
+        <button type="button" class="button-danger" id="reset-finance-button">Reset Everything</button>
       </div>
     </section>
   </div>
