@@ -12,13 +12,6 @@ function setText(id, value) {
   }
 }
 
-function setHTML(id, value) {
-  const el = byId(id);
-  if (el) {
-    el.innerHTML = value;
-  }
-}
-
 function setWidth(id, value) {
   const el = byId(id);
   if (el) {
@@ -50,6 +43,14 @@ function normalizeExpenseType(type) {
   }
 
   return "Variable";
+}
+
+function normalizeRecurrence(value) {
+  return value === "Every 2 Weeks" ? "Every 2 Weeks" : "None";
+}
+
+function getRecurrenceDays(value) {
+  return normalizeRecurrence(value) === "Every 2 Weeks" ? 14 : 0;
 }
 
 function parseDateValue(value) {
@@ -99,6 +100,25 @@ function getDaysUntil(value) {
   const due = new Date(target.getFullYear(), target.getMonth(), target.getDate());
 
   return Math.ceil((due - today) / 86400000);
+}
+
+function toDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getNextDueDate(currentDueDate, recurrence) {
+  const date = parseDateValue(currentDueDate);
+  const days = getRecurrenceDays(recurrence);
+
+  if (!date || !days) {
+    return "";
+  }
+
+  const next = new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+  return toDateInputValue(next);
 }
 
 function formatCurrency(value) {
@@ -189,6 +209,7 @@ function getData() {
     const expenses = rawExpenses
       .map((expense) => {
         const type = normalizeExpenseType(expense.type);
+        const recurrence = type === "Fixed" ? normalizeRecurrence(expense.recurrence) : "None";
         const createdAt = expense.createdAt || new Date().toISOString();
         const autoPaid = type === "Variable" || type === "Goal Allocation";
 
@@ -197,6 +218,9 @@ function getData() {
           name: String(expense.name || "").trim(),
           category: String(expense.category || "Other").trim() || "Other",
           type,
+          recurrence,
+          seriesId: expense.seriesId || (type === "Fixed" && recurrence !== "None" ? createId("series") : ""),
+          generatedFromExpenseId: expense.generatedFromExpenseId || "",
           goalId: expense.goalId || "",
           goalName: String(expense.goalName || "").trim(),
           dueDate: expense.dueDate || "",
@@ -268,60 +292,36 @@ function getExpenseStatus(expense) {
   const type = normalizeExpenseType(expense.type);
 
   if (type === "Variable") {
-    return {
-      text: "Paid",
-      className: "status-pill status-good"
-    };
+    return { text: "Paid", className: "status-pill status-good" };
   }
 
   if (type === "Goal Allocation") {
-    return {
-      text: "Allocated",
-      className: "status-pill status-good"
-    };
+    return { text: "Allocated", className: "status-pill status-good" };
   }
 
   if (isExpensePaid(expense)) {
-    return {
-      text: "Paid",
-      className: "status-pill status-good"
-    };
+    return { text: "Paid", className: "status-pill status-good" };
   }
 
   const daysLeft = getDaysUntil(expense.dueDate);
 
   if (daysLeft === null) {
-    return {
-      text: "No Due Date",
-      className: "status-pill status-bad"
-    };
+    return { text: "No Due Date", className: "status-pill status-bad" };
   }
 
   if (daysLeft < 0) {
-    return {
-      text: "Overdue",
-      className: "status-pill status-bad"
-    };
+    return { text: "Overdue", className: "status-pill status-bad" };
   }
 
   if (daysLeft === 0) {
-    return {
-      text: "Due Today",
-      className: "status-pill status-warn"
-    };
+    return { text: "Due Today", className: "status-pill status-warn" };
   }
 
   if (daysLeft <= 7) {
-    return {
-      text: "Due Soon",
-      className: "status-pill status-warn"
-    };
+    return { text: "Due Soon", className: "status-pill status-warn" };
   }
 
-  return {
-    text: "Upcoming",
-    className: "status-pill status-good"
-  };
+  return { text: "Upcoming", className: "status-pill status-good" };
 }
 
 function sortExpensesForDisplay(expenses) {
@@ -527,6 +527,7 @@ function addExpense(event) {
   const nameInput = byId("expense-name");
   const categoryInput = byId("expense-category");
   const typeInput = byId("expense-type");
+  const recurrenceInput = byId("expense-recurrence");
   const goalSelect = byId("expense-goal-id");
   const dueDateInput = byId("expense-due-date");
   const amountInput = byId("expense-amount");
@@ -537,6 +538,7 @@ function addExpense(event) {
 
   const name = nameInput.value.trim();
   const type = normalizeExpenseType(typeInput ? typeInput.value : "Variable");
+  const recurrence = type === "Fixed" ? normalizeRecurrence(recurrenceInput ? recurrenceInput.value : "None") : "None";
   const amount = Number(amountInput.value);
 
   if (!name || !Number.isFinite(amount) || amount <= 0) {
@@ -549,10 +551,15 @@ function addExpense(event) {
   let dueDate = dueDateInput ? dueDateInput.value : "";
   let goalId = "";
   let goalName = "";
+  let seriesId = "";
 
-  if (type === "Fixed" && !dueDate) {
-    setMessage("expense-message", "Fixed expenses require a due date.", "error");
-    return;
+  if (type === "Fixed") {
+    if (!dueDate) {
+      setMessage("expense-message", "Fixed expenses require a due date.", "error");
+      return;
+    }
+
+    seriesId = recurrence !== "None" ? createId("series") : "";
   }
 
   if (type === "Goal Allocation") {
@@ -587,6 +594,9 @@ function addExpense(event) {
     name,
     category,
     type,
+    recurrence,
+    seriesId,
+    generatedFromExpenseId: "",
     goalId,
     goalName,
     dueDate,
@@ -662,24 +672,70 @@ function deleteIncomeSource(sourceId) {
 
 function toggleExpensePaid(expenseId) {
   const data = getData();
+  const target = data.expenses.find((expense) => expense.id === expenseId);
+
+  if (!target || normalizeExpenseType(target.type) !== "Fixed") {
+    return;
+  }
+
+  const turningPaid = !Boolean(target.isPaid);
+  const now = new Date().toISOString();
+  const recurrence = normalizeRecurrence(target.recurrence);
+  const seriesId = target.seriesId || (recurrence !== "None" ? createId("series") : "");
 
   data.expenses = data.expenses.map((expense) => {
     if (expense.id !== expenseId) {
       return expense;
     }
 
-    if (normalizeExpenseType(expense.type) !== "Fixed") {
-      return expense;
-    }
-
-    const nextPaid = !Boolean(expense.isPaid);
-
     return {
       ...expense,
-      isPaid: nextPaid,
-      paidAt: nextPaid ? new Date().toISOString() : ""
+      seriesId,
+      isPaid: turningPaid,
+      paidAt: turningPaid ? now : ""
     };
   });
+
+  if (turningPaid && recurrence !== "None") {
+    const nextDueDate = getNextDueDate(target.dueDate, recurrence);
+
+    if (nextDueDate) {
+      const existingNext = data.expenses.some((expense) => {
+        return (
+          expense.generatedFromExpenseId === target.id ||
+          (
+            expense.seriesId === seriesId &&
+            expense.dueDate === nextDueDate &&
+            expense.name === target.name &&
+            !isExpensePaid(expense)
+          )
+        );
+      });
+
+      if (!existingNext) {
+        data.expenses.unshift({
+          id: createId("expense"),
+          name: target.name,
+          category: target.category,
+          type: "Fixed",
+          recurrence,
+          seriesId,
+          generatedFromExpenseId: target.id,
+          goalId: "",
+          goalName: "",
+          dueDate: nextDueDate,
+          amount: target.amount,
+          isPaid: false,
+          paidAt: "",
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
+  }
+
+  if (!turningPaid && recurrence !== "None") {
+    data.expenses = data.expenses.filter((expense) => expense.generatedFromExpenseId !== target.id);
+  }
 
   saveData(data);
   render();
@@ -804,6 +860,8 @@ function updateExpenseFormState() {
   const dueHelp = byId("expense-due-help");
   const goalWrap = byId("expense-goal-wrap");
   const goalSelect = byId("expense-goal-id");
+  const recurrenceWrap = byId("expense-recurrence-wrap");
+  const recurrenceSelect = byId("expense-recurrence");
 
   if (!typeInput) {
     return;
@@ -834,6 +892,18 @@ function updateExpenseFormState() {
     }
   }
 
+  if (recurrenceWrap) {
+    recurrenceWrap.style.display = isFixed ? "grid" : "none";
+  }
+
+  if (recurrenceSelect) {
+    recurrenceSelect.disabled = !isFixed;
+
+    if (!isFixed) {
+      recurrenceSelect.value = "None";
+    }
+  }
+
   if (categoryInput) {
     if (isGoalAllocation) {
       categoryInput.value = "Goals";
@@ -849,7 +919,7 @@ function updateExpenseFormState() {
 
   if (dueHelp) {
     if (isFixed) {
-      dueHelp.textContent = "Required for fixed expenses. Use the bill due date.";
+      dueHelp.textContent = "Required for fixed expenses. You can set one-time or every 2 weeks.";
     } else if (isGoalAllocation) {
       dueHelp.textContent = "Goal allocations are credited immediately to the selected goal.";
     } else {
@@ -894,12 +964,8 @@ function renderDashboard(data, totals) {
   if (!data.incomes.length && !data.expenses.length) {
     setText("dashboard-note", "Income minus paid expenses and allocations.");
     setText("dashboard-summary", "Add your first income and expense entries to unlock your live overview.");
-  } else if (netSavings >= 0) {
-    const savingsRate = totalIncome > 0 ? Math.max((netSavings / totalIncome) * 100, 0) : 0;
-    setText("dashboard-note", `You are keeping ${savingsRate.toFixed(1)}% of your income.`);
-    setText("dashboard-summary", `Current available balance is ${formatCurrency(availableNow)}.`);
   } else {
-    setText("dashboard-note", "Paid expenses are currently higher than income.");
+    setText("dashboard-note", "Income minus paid expenses and allocations.");
     setText("dashboard-summary", `Current available balance is ${formatCurrency(availableNow)}.`);
   }
 
@@ -988,8 +1054,9 @@ function renderDashboard(data, totals) {
   reminderList.innerHTML = openBills.map((expense) => {
     const status = getExpenseStatus(expense);
     const daysLeft = getDaysUntil(expense.dueDate);
+    const recurrenceText = normalizeRecurrence(expense.recurrence) !== "None" ? ` • ${expense.recurrence}` : "";
 
-    let dueText = `Due ${formatDate(expense.dueDate)}`;
+    let dueText = `Due ${formatDate(expense.dueDate)}${recurrenceText}`;
 
     if (daysLeft !== null) {
       if (daysLeft < 0) {
@@ -1230,7 +1297,8 @@ function renderExpensesPage(data, totals) {
 
   const expenses = data.expenses.map((expense) => ({
     ...expense,
-    type: normalizeExpenseType(expense.type)
+    type: normalizeExpenseType(expense.type),
+    recurrence: normalizeRecurrence(expense.recurrence)
   }));
 
   const fixedExpenses = expenses.filter((expense) => expense.type === "Fixed");
@@ -1276,8 +1344,9 @@ function renderExpensesPage(data, totals) {
       list.innerHTML = sortedExpenses.map((expense) => {
         const type = normalizeExpenseType(expense.type);
         const status = getExpenseStatus(expense);
+        const recurrenceText = type === "Fixed" && expense.recurrence !== "None" ? ` • ${expense.recurrence}` : "";
 
-        let detailText = `${escapeHtml(expense.category)} • ${type}`;
+        let detailText = `${escapeHtml(expense.category)} • ${type}${recurrenceText}`;
 
         if (type === "Fixed" && expense.dueDate) {
           detailText += ` • Due ${formatDate(expense.dueDate)}`;
