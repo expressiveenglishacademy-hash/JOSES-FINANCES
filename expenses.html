@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FinanceFlow | Expenses</title>
+  <title>FinanceFlow | Income</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,122 +14,118 @@
     <header class="topbar">
       <div class="brand">
         <span class="brand-badge">FinanceFlow</span>
-        <h1>Expense Tracker</h1>
-        <p>Track fixed expenses with due dates and variable expenses separately so you can control your cash flow better.</p>
+        <h1>Income Tracker</h1>
+        <p>Start with your current bank funds, save recurring income sources into a menu, and track total money received from each source.</p>
       </div>
 
       <nav class="nav">
         <a href="index.html">Dashboard</a>
-        <a href="income.html">Income</a>
-        <a class="active" href="expenses.html">Expenses</a>
+        <a class="active" href="income.html">Income</a>
+        <a href="expenses.html">Expenses</a>
         <a href="savings.html">Savings</a>
         <a href="goals.html">Goals</a>
       </nav>
     </header>
 
-    <section class="hero hero-expenses">
+    <section class="hero hero-income">
       <div>
-        <div class="hero-tag">Add expenses</div>
-        <h2>Separate fixed bills from variable spending.</h2>
-        <p>Fixed expenses can include due dates, while variable expenses help you track flexible spending like food, shopping, and everyday purchases.</p>
+        <div class="hero-tag">Income and available funds</div>
+        <h2>Start with what you already have and then keep adding new payments.</h2>
+        <p>Your current bank funds act as your starting balance. Saved income sources stay in a dropdown so you can quickly select them next time.</p>
       </div>
 
       <div class="hero-total">
-        <span>Total Expenses</span>
-        <strong id="expense-total">$0.00</strong>
+        <span>Total Income Received</span>
+        <strong id="income-total">$0.00</strong>
       </div>
     </section>
 
-    <section class="stats-grid three">
-      <article class="card">
-        <div class="metric-label">Fixed Expenses</div>
-        <p class="metric-value" id="expense-fixed-total">$0.00</p>
-        <p class="metric-meta">Bills and recurring payments with due dates.</p>
-      </article>
-
-      <article class="card">
-        <div class="metric-label">Variable Expenses</div>
-        <p class="metric-value" id="expense-variable-total">$0.00</p>
-        <p class="metric-meta">Flexible spending without a fixed payment date.</p>
-      </article>
-
-      <article class="card">
-        <div class="metric-label">Payment Alerts</div>
-        <p class="metric-value" id="expense-alert-total">0</p>
-        <p class="metric-meta" id="expense-alert-meta">No fixed bills due yet.</p>
-      </article>
-    </section>
-
     <section class="grid-2-wide">
-      <article class="card">
-        <h3 class="section-title">Add Expense</h3>
+      <div class="stack">
+        <article class="card">
+          <div class="inline-head">
+            <h3 class="section-title" style="margin: 0;">Current Bank Funds</h3>
+            <span class="badge">Starting Balance</span>
+          </div>
 
-        <form id="expense-form" class="form-grid">
-          <label class="form-field">
-            Expense Name
-            <input class="input" id="expense-name" type="text" placeholder="Rent, groceries, internet">
-          </label>
+          <p class="subtle" id="bank-balance-note">Add the money you currently have available in your accounts so the app does not start from zero.</p>
 
-          <label class="form-field">
-            Category
-            <select class="select" id="expense-category">
-              <option value="Home & Food">Home & Food</option>
-              <option value="Family">Family</option>
-              <option value="Personal">Personal</option>
-              <option value="Other">Other</option>
-            </select>
-          </label>
+          <div class="goal-breakdown" style="margin-bottom: 18px;">
+            <div class="goal-stat">
+              <span>Bank Funds</span>
+              <strong id="income-bank-funds">$0.00</strong>
+            </div>
 
-          <label class="form-field">
-            Expense Type
-            <select class="select" id="expense-type">
-              <option value="Fixed">Fixed</option>
-              <option value="Variable">Variable</option>
-            </select>
-          </label>
+            <div class="goal-stat">
+              <span>Available Now</span>
+              <strong id="income-available-now">$0.00</strong>
+            </div>
+          </div>
 
-          <label class="form-field">
-            Due Date
-            <input class="input" id="expense-due-date" type="date">
-          </label>
+          <form id="bank-balance-form" class="form-grid">
+            <label class="form-field">
+              Current Total in Accounts
+              <input class="input" id="bank-balance-amount" type="number" min="0" step="0.01" placeholder="0.00">
+            </label>
 
-          <p class="subtle" id="expense-due-help">Required for fixed expenses. Optional for variable expenses.</p>
+            <button class="button" type="submit">Update Bank Funds</button>
+            <div id="bank-balance-message" class="message"></div>
+          </form>
+        </article>
 
-          <label class="form-field">
-            Amount
-            <input class="input" id="expense-amount" type="number" min="0" step="0.01" placeholder="0.00">
-          </label>
+        <article class="card">
+          <h3 class="section-title">Add Income</h3>
 
-          <button class="button" type="submit">Save Expense</button>
-          <div id="expense-message" class="message"></div>
-        </form>
-      </article>
+          <form id="income-form" class="form-grid">
+            <label class="form-field">
+              Saved Source
+              <select class="select" id="income-source-select"></select>
+            </label>
+
+            <label class="form-field" id="income-new-source-wrap">
+              New Source Name
+              <input class="input" id="income-new-source" type="text" placeholder="Salary, freelance, business">
+            </label>
+
+            <label class="form-field">
+              Amount
+              <input class="input" id="income-amount" type="number" min="0" step="0.01" placeholder="0.00">
+            </label>
+
+            <button class="button" type="submit">Save Income</button>
+            <div id="income-message" class="message"></div>
+          </form>
+        </article>
+      </div>
 
       <div class="stack">
         <article class="card">
           <div class="inline-head">
-            <h3 class="section-title" style="margin: 0;">Expense List</h3>
-            <span class="badge" id="expense-count">0 entries</span>
+            <h3 class="section-title" style="margin: 0;">Income Sources</h3>
+            <span class="badge" id="income-source-count">0 saved</span>
           </div>
 
-          <div id="expense-list" class="list">
-            <div class="empty-state">No expenses added yet. Start tracking fixed and variable spending to see your chart and totals.</div>
+          <p class="subtle">Delete removes the source from the dropdown menu, but your past income history stays saved.</p>
+
+          <div id="income-source-summary" class="list" style="margin-top: 18px;">
+            <div class="empty-state">No income sources saved yet. Add your first payment source to build the menu.</div>
           </div>
         </article>
 
         <article class="card">
-          <h3 class="section-title">Category Breakdown</h3>
+          <div class="inline-head">
+            <h3 class="section-title" style="margin: 0;">Income History</h3>
+            <span class="badge" id="income-count">0 entries</span>
+          </div>
 
-          <div class="chart-wrap">
-            <canvas id="expense-chart"></canvas>
-            <div id="expense-chart-empty" class="chart-empty">Add some expenses to generate the category pie chart.</div>
+          <div id="income-list" class="list">
+            <div class="empty-state">No income added yet. Add your first income entry to start building your cash flow.</div>
           </div>
         </article>
       </div>
     </section>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
