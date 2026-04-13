@@ -882,10 +882,12 @@ function renderDashboard(data, totals) {
     ? Math.max(0, Math.min((totalGoalAllocated / totals.totalGoals) * 100, 100))
     : 0;
 
-  setText("dashboard-income", formatCurrency(totalIncome));
-  setText("dashboard-expenses", formatCurrency(totalExpenses));
-  setText("dashboard-savings", formatCurrency(netSavings));
-  setText("dashboard-deductions", `${deductionsRate.toFixed(1)}%`);
+setText("dashboard-income", formatCurrency(totalIncome));
+setText("dashboard-expenses", formatCurrency(totalExpenses));
+setText("dashboard-savings", formatCurrency(netSavings));
+setText("dashboard-deductions", `${deductionsRate.toFixed(1)}%`);
+setText("dashboard-available-balance", formatCurrency(availableNow));
+
 
   setText("dashboard-income-line", formatCurrency(totalIncome));
   setText("dashboard-expense-line", formatCurrency(totalExpenses));
