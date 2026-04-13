@@ -15,7 +15,7 @@
       <div class="brand">
         <span class="brand-badge">FinanceFlow</span>
         <h1>Expense Tracker</h1>
-        <p>Add fixed bills, variable expenses, and goal allocations. Goal allocations reduce your available money and credit the selected goal automatically.</p>
+        <p>Add fixed expenses, variable expenses, and goal allocations. When you choose <strong>Goal Allocation</strong>, your goals will appear in a dropdown and the money will be reflected there.</p>
       </div>
 
       <nav class="nav">
@@ -30,33 +30,33 @@
     <section class="hero hero-expenses">
       <div>
         <div class="hero-tag">Add expenses</div>
-        <h2>Track fixed bills, flexible spending, and money allocated to goals.</h2>
-        <p>Fixed expenses stay open until you mark them paid. Goal allocations are counted immediately and attached to the goal you choose.</p>
+        <h2>Track bills, spending, and savings transfers.</h2>
+        <p>Fixed expenses stay open until paid, variable expenses count immediately, and goal allocations move money into a selected goal.</p>
       </div>
 
       <div class="hero-total">
-        <span>Paid Expenses</span>
+        <span>Paid / Allocated</span>
         <strong id="expense-total">$0.00</strong>
       </div>
     </section>
 
     <section class="stats-grid">
       <article class="card">
-        <div class="metric-label">Fixed Bills Scheduled</div>
+        <div class="metric-label">Fixed Bills</div>
         <p class="metric-value" id="expense-fixed-total">$0.00</p>
-        <p class="metric-meta">All fixed expenses you have registered.</p>
+        <p class="metric-meta">Registered recurring bills.</p>
       </article>
 
       <article class="card">
         <div class="metric-label">Variable Expenses</div>
         <p class="metric-value" id="expense-variable-total">$0.00</p>
-        <p class="metric-meta">Flexible spending already counted as paid.</p>
+        <p class="metric-meta">Flexible spending already counted.</p>
       </article>
 
       <article class="card">
         <div class="metric-label">Goal Allocations</div>
         <p class="metric-value" id="expense-goal-total">$0.00</p>
-        <p class="metric-meta">Money moved out of free cash and into goals.</p>
+        <p class="metric-meta">Money reserved toward savings goals.</p>
       </article>
 
       <article class="card">
@@ -73,7 +73,7 @@
         <form id="expense-form" class="form-grid">
           <label class="form-field">
             Expense Name
-            <input class="input" id="expense-name" type="text" placeholder="Rent, groceries, emergency fund transfer">
+            <input class="input" id="expense-name" type="text" placeholder="Rent, groceries, emergency fund deposit">
           </label>
 
           <label class="form-field">
@@ -98,7 +98,9 @@
 
           <label class="form-field" id="expense-goal-wrap" style="display: none;">
             Select Goal
-            <select class="select" id="expense-goal-id"></select>
+            <select class="select" id="expense-goal-id">
+              <option value="">Select a goal</option>
+            </select>
           </label>
 
           <label class="form-field">
@@ -135,7 +137,7 @@
 
           <div class="chart-wrap">
             <canvas id="expense-chart"></canvas>
-            <div id="expense-chart-empty" class="chart-empty">Add paid expenses to generate the category pie chart.</div>
+            <div id="expense-chart-empty" class="chart-empty">Add paid or allocated expenses to generate the chart.</div>
           </div>
         </article>
       </div>
