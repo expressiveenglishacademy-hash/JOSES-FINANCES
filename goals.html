@@ -428,7 +428,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>FinanceFlow</h1>
-        <p>Create goals again and compare them directly against the household available balance that both of you are building together.</p>
+        <p>Track your goals based on the money you have actually allocated from the expenses page, while still seeing how much household money remains available.</p>
       </div>
       <nav class="nav">
         <a href="index.html">Dashboard</a>
@@ -442,11 +442,11 @@
     <section class="hero">
       <div>
         <div class="hero-tag">Goal planning</div>
-        <h2>Turn the remaining household balance into clear targets.</h2>
-        <p>Goals here are compared to the household available amount, while you can still see each person's available balance underneath.</p>
+        <h2>Turn goal allocations into visible progress.</h2>
+        <p>Every time you use <strong>Goal Allocation</strong> on the expenses page, that money appears here as funded progress and is deducted from your available balance.</p>
       </div>
       <div class="hero-total">
-        <span>Household Available</span>
+        <span>Household Available After Allocations</span>
         <strong id="goals-household-available">$0.00</strong>
       </div>
     </section>
@@ -463,9 +463,9 @@
         <p class="stat-meta">Combined amount across every goal.</p>
       </article>
       <article class="card">
-        <div class="stat-label">Coverage</div>
+        <div class="stat-label">Allocated Coverage</div>
         <p class="stat-value" id="goals-coverage">0.0%</p>
-        <p class="stat-meta">How much of your total target is covered today.</p>
+        <p class="stat-meta">How much of your total goal target has already been funded.</p>
       </article>
     </section>
 
@@ -474,7 +474,7 @@
         <h3 class="section-title" style="margin: 0;">Available Balance By Person</h3>
         <span class="badge">Planning context</span>
       </div>
-      <p class="section-copy" id="goals-summary">Create a goal and we will compare it against what the household has available right now.</p>
+      <p class="section-copy" id="goals-summary">Create a goal and we will compare it against the money you have actively allocated to your goals.</p>
       <div id="goals-balance-grid" class="person-grid" style="margin-top: 18px;"></div>
       <p id="goals-legacy-note" class="subtle" style="display: none; margin-top: 18px;"></p>
     </section>
@@ -482,7 +482,7 @@
     <section class="layout">
       <article class="card">
         <h3 class="section-title">Add Goal</h3>
-        <p class="section-copy" style="margin-bottom: 18px;">Set a target and optional due date so you can track how close the household balance is to covering it.</p>
+        <p class="section-copy" style="margin-bottom: 18px;">Create the goal here first, then allocate money to it from the expenses page whenever you want to reserve funds.</p>
         <form id="goal-form" class="form-grid">
           <label>
             Goal Name
@@ -505,10 +505,10 @@
         <article class="card">
           <div class="inline-head">
             <h3 class="section-title" style="margin: 0;">Goals List</h3>
-            <span class="badge">Live progress</span>
+            <span class="badge">Allocated progress</span>
           </div>
           <div id="goal-list" class="list">
-            <div class="empty-state">No goals added yet. Add your first target to see progress against the household available balance.</div>
+            <div class="empty-state">No goals added yet. Add your first target to see progress from your goal allocations.</div>
           </div>
         </article>
       </div>
