@@ -219,6 +219,38 @@
       font-weight: 700;
     }
 
+    .button {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: #02111f;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 30px rgba(56, 189, 248, 0.26);
+    }
+
+    .button-danger {
+      background: rgba(251, 113, 133, 0.14);
+      color: #fda4af;
+      box-shadow: none;
+    }
+
+    .button.button-danger:hover {
+      box-shadow: 0 16px 30px rgba(251, 113, 133, 0.18);
+    }
+
+    .danger-zone {
+      border-color: rgba(251, 113, 133, 0.18);
+      background: linear-gradient(135deg, rgba(251, 113, 133, 0.10), rgba(15, 23, 42, 0.92));
+    }
+
     .person-card {
       padding: 18px;
       border-radius: 20px;
@@ -473,6 +505,17 @@
       <div id="expense-split-list" class="list">
         <div class="empty-state">No expenses have been recorded yet.</div>
       </div>
+    </section>
+
+    <section class="card danger-zone" style="margin-top: 18px;">
+      <div class="inline-head">
+        <h3 class="section-title" style="margin: 0;">Reset All Data</h3>
+        <span class="badge" style="background: rgba(251, 113, 133, 0.12); color: #fda4af;">Protected</span>
+      </div>
+      <p class="section-copy" style="margin-bottom: 18px;">
+        This permanently deletes all saved household data. To continue, the app will ask for code <strong>8681</strong>.
+      </p>
+      <button class="button button-danger" id="reset-finance-button" type="button">Reset Everything</button>
     </section>
   </div>
 
