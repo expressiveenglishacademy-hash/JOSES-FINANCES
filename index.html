@@ -7,128 +7,469 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --panel: rgba(15, 23, 42, 0.92);
+      --border: rgba(148, 163, 184, 0.16);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --shadow: 0 28px 80px rgba(2, 6, 23, 0.45);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Plus Jakarta Sans", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(30, 41, 59, 0.65), transparent 34%),
+        linear-gradient(180deg, #0f172a 0%, #020617 100%);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .container {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 4vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .brand p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 720px;
+      line-height: 1.6;
+    }
+
+    .nav {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .nav a {
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.72);
+      color: var(--muted);
+      font-weight: 600;
+      transition: 0.2s ease;
+    }
+
+    .nav a:hover,
+    .nav a.active {
+      color: #f8fafc;
+      border-color: rgba(56, 189, 248, 0.45);
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(15, 23, 42, 0.9));
+      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.16);
+    }
+
+    .hero,
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 28px;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(15, 23, 42, 0.92));
+      border-color: rgba(56, 189, 248, 0.22);
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      color: var(--accent);
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .hero h2 {
+      margin: 0;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .hero-total {
+      padding: 18px 22px;
+      min-width: 240px;
+      border-radius: 22px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      text-align: right;
+    }
+
+    .hero-total span {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .hero-total strong {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      letter-spacing: -0.05em;
+    }
+
+    .stats-grid,
+    .person-grid,
+    .content-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-bottom: 24px;
+    }
+
+    .person-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .content-grid {
+      grid-template-columns: 1.2fr 0.8fr;
+    }
+
+    .card { padding: 22px; }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-copy,
+    .stat-meta,
+    .subtle {
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+    }
+
+    .stat-value {
+      font-size: clamp(1.8rem, 3vw, 2.7rem);
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      margin: 0 0 10px;
+    }
+
+    .inline-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.1);
+      color: #bae6fd;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .person-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.74);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .shared-card {
+      border-style: dashed;
+    }
+
+    .person-kicker {
+      display: inline-flex;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .person-card strong {
+      display: block;
+      font-size: 1.9rem;
+      letter-spacing: -0.04em;
+      margin-bottom: 10px;
+    }
+
+    .person-meta {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .list-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.98rem;
+    }
+
+    .item-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .empty-state {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px dashed rgba(148, 163, 184, 0.18);
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .bar-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .bar-row {
+      display: grid;
+      gap: 8px;
+    }
+
+    .bar-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 12px;
+      background: rgba(30, 41, 59, 0.86);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      transition: width 0.35s ease;
+    }
+
+    .income-bar { background: linear-gradient(90deg, #38bdf8, #0ea5e9); }
+    .expense-bar { background: linear-gradient(90deg, #fb7185, #f43f5e); }
+    .available-bar { background: linear-gradient(90deg, #22c55e, #14b8a6); }
+
+    @media (max-width: 980px) {
+      .hero,
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .hero-total {
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        width: min(100% - 20px, 100%);
+        padding: 18px 0 28px;
+      }
+
+      .hero,
+      .card {
+        padding: 18px;
+        border-radius: 20px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav {
+        width: 100%;
+      }
+
+      .nav a {
+        flex: 1 1 calc(50% - 8px);
+        text-align: center;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="app">
+  <div class="container" id="dashboard-page">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-badge">FinanceFlow</span>
-        <h1>Personal Finance Dashboard</h1>
-        <p>Track income, expenses, available balance, goal allocations, and upcoming fixed payments in one place.</p>
+        <h1>FinanceFlow</h1>
+        <p>Track the household together while still seeing clearly what each person brings in, spends, and still has available.</p>
       </div>
-
       <nav class="nav">
         <a class="active" href="index.html">Dashboard</a>
         <a href="income.html">Income</a>
         <a href="expenses.html">Expenses</a>
-        <a href="savings.html">Savings</a>
-        <a href="goals.html">Goals</a>
       </nav>
     </header>
 
-    <section class="hero hero-dashboard">
+    <section class="hero">
       <div>
-        <div class="hero-tag">Summary only</div>
-        <h2>Your complete financial overview at a glance.</h2>
-        <p>This page summarizes your current available balance, income, paid expenses, net savings, goal allocations, and payment reminders.</p>
+        <div class="hero-tag">Shared household view</div>
+        <h2>One shared dashboard with individual balances for both of you.</h2>
+        <p>Every income and expense is tagged to one person, so the household total stays in sync while each available balance stays separate.</p>
       </div>
-
       <div class="hero-total">
-        <span>Current Available Balance</span>
-        <strong id="dashboard-available-balance">$0.00</strong>
+        <span>Household Available Balance</span>
+        <strong id="dashboard-household-available">$0.00</strong>
       </div>
     </section>
 
     <section class="stats-grid">
       <article class="card">
-        <div class="metric-label">Total Income</div>
-        <p class="metric-value" id="dashboard-income">$0.00</p>
-        <p class="metric-meta">All registered income payments.</p>
+        <div class="stat-label">Household Income</div>
+        <p class="stat-value" id="total-income">$0.00</p>
+        <p class="stat-meta">All income entries from both people combined.</p>
       </article>
-
       <article class="card">
-        <div class="metric-label">Paid Expenses</div>
-        <p class="metric-value" id="dashboard-expenses">$0.00</p>
-        <p class="metric-meta">Paid bills, variable expenses, and goal allocations.</p>
+        <div class="stat-label">Household Expenses</div>
+        <p class="stat-value" id="total-expenses">$0.00</p>
+        <p class="stat-meta">All expenses already assigned to either person.</p>
       </article>
-
       <article class="card">
-        <div class="metric-label">Net Savings</div>
-        <p class="metric-value" id="dashboard-savings">$0.00</p>
-        <p class="metric-meta" id="dashboard-note">Income minus paid expenses and allocations.</p>
+        <div class="stat-label">Available To Spend</div>
+        <p class="stat-value" id="total-available">$0.00</p>
+        <p class="stat-meta">What the household still has left right now.</p>
       </article>
-
       <article class="card">
-        <div class="metric-label">Deductions</div>
-        <p class="metric-value" id="dashboard-deductions">0%</p>
-        <p class="metric-meta">Share of income already assigned or spent.</p>
+        <div class="stat-label">Deductions</div>
+        <p class="stat-value" id="deductions-value">0%</p>
+        <p class="stat-meta">How much of the household income has already gone out.</p>
       </article>
     </section>
 
-    <section class="grid-2">
+    <section class="card" style="margin-bottom: 24px;">
+      <div class="inline-head">
+        <h3 class="section-title" style="margin: 0;">Available Balance By Person</h3>
+        <span class="badge">Live split</span>
+      </div>
+      <p class="section-copy">Each card below updates from that person's own income minus that person's own expenses.</p>
+      <div id="person-stats" class="person-grid" style="margin-top: 18px;"></div>
+      <p id="shared-data-note" class="subtle" style="display: none; margin-top: 18px;"></p>
+    </section>
+
+    <section class="content-grid">
       <article class="card">
-        <h3 class="section-title">Cash Flow Snapshot</h3>
-
-        <div class="snapshot">
+        <h3 class="section-title">Household Cash Flow</h3>
+        <div class="bar-stack">
           <div class="bar-row">
-            <div class="bar-head">
+            <div class="bar-header">
               <span>Income</span>
-              <span id="dashboard-income-line">$0.00</span>
+              <span id="income-line">$0.00</span>
             </div>
-            <div class="progress-track">
-              <div class="progress-fill fill-income" id="dashboard-income-bar"></div>
-            </div>
+            <div class="bar-track"><div class="bar-fill income-bar" id="income-bar"></div></div>
           </div>
-
           <div class="bar-row">
-            <div class="bar-head">
-              <span>Paid Expenses</span>
-              <span id="dashboard-expense-line">$0.00</span>
+            <div class="bar-header">
+              <span>Expenses</span>
+              <span id="expense-line">$0.00</span>
             </div>
-            <div class="progress-track">
-              <div class="progress-fill fill-expense" id="dashboard-expense-bar"></div>
-            </div>
+            <div class="bar-track"><div class="bar-fill expense-bar" id="expense-bar"></div></div>
           </div>
-
           <div class="bar-row">
-            <div class="bar-head">
-              <span>Net Savings</span>
-              <span id="dashboard-savings-line">$0.00</span>
+            <div class="bar-header">
+              <span>Available</span>
+              <span id="available-line">$0.00</span>
             </div>
-            <div class="progress-track">
-              <div class="progress-fill fill-savings" id="dashboard-savings-bar"></div>
-            </div>
+            <div class="bar-track"><div class="bar-fill available-bar" id="available-bar"></div></div>
           </div>
         </div>
-
-        <p class="metric-meta" id="dashboard-summary" style="margin-top: 18px;">Add income and expenses to see your live cash flow.</p>
+        <p class="section-copy" id="summary-text" style="margin-top: 18px;">Add income and expenses to activate the shared household view.</p>
       </article>
 
       <article class="card">
-        <h3 class="section-title">Goals Readiness</h3>
-        <p class="metric-meta" id="dashboard-goal-copy">No goals added yet. Head to the goals page to create your targets.</p>
-
-        <div class="progress-track large" style="margin: 18px 0;">
-          <div class="progress-fill fill-goals" id="dashboard-goal-bar"></div>
-        </div>
-
-        <div id="dashboard-goal-list" class="list">
-          <div class="empty-state">Your goals will appear here with progress based on allocated money.</div>
+        <h3 class="section-title">Income By Person</h3>
+        <p class="section-copy" style="margin-bottom: 18px;">A quick split of who has contributed what so far.</p>
+        <div id="income-split-list" class="list">
+          <div class="empty-state">No income has been recorded yet.</div>
         </div>
       </article>
     </section>
 
     <section class="card" style="margin-top: 18px;">
-      <div class="inline-head">
-        <h3 class="section-title" style="margin: 0;">Payment Reminders</h3>
-        <span class="badge" id="dashboard-reminder-count">0 open bills</span>
-      </div>
-
-      <p class="metric-meta" id="dashboard-reminder-meta">Upcoming fixed payments that still need to be marked as paid.</p>
-
-      <div id="dashboard-reminder-list" class="list">
-        <div class="empty-state">No open fixed payments. Once you add fixed expenses with due dates, reminders will appear here.</div>
+      <h3 class="section-title">Recent Expenses By Person</h3>
+      <p class="section-copy" style="margin-bottom: 18px;">Each expense shows who covered the payment, which is what drives that person's available balance down.</p>
+      <div id="expense-split-list" class="list">
+        <div class="empty-state">No expenses have been recorded yet.</div>
       </div>
     </section>
   </div>
