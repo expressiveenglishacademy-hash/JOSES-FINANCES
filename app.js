@@ -137,15 +137,58 @@ function normalizeIncomes(rawIncomes, validIds) {
   })).filter((income) => income.name && income.amount > 0);
 }
 
-function normalizeExpenses(rawExpenses, validIds) {
-  return (Array.isArray(rawExpenses) ? rawExpenses : []).map((expense) => ({
-    id: expense.id || createId("expense"),
-    personId: normalizePersonId(expense.personId, validIds),
-    name: String(expense.name || "").trim(),
-    category: String(expense.category || "Other").trim() || "Other",
-    amount: Number(expense.amount) || 0,
-    createdAt: expense.createdAt || new Date().toISOString()
-  })).filter((expense) => expense.name && expense.amount > 0);
+function resolveGoalReference(expense, goals) {
+  const goalId = String(expense.goalId || "").trim();
+  const goalName = String(expense.goalName || "").trim();
+
+  if (goalId) {
+    const goalById = goals.find((goal) => goal.id === goalId);
+    if (goalById) {
+      return { goalId: goalById.id, goalName: goalById.name };
+    }
+  }
+
+  if (goalName) {
+    const goalByName = goals.find((goal) => goal.name.toLowerCase() === goalName.toLowerCase());
+    if (goalByName) {
+      return { goalId: goalByName.id, goalName: goalByName.name };
+    }
+  }
+
+  return { goalId: goalId || "", goalName };
+}
+
+function normalizeExpenses(rawExpenses, validIds, goals) {
+  return (Array.isArray(rawExpenses) ? rawExpenses : []).map((expense) => {
+    const legacyGoalAllocation = expense.type === "Goal Allocation";
+    const expenseType = expense.expenseType === "goal-allocation" || legacyGoalAllocation
+      ? "goal-allocation"
+      : "regular";
+    const goalRef = resolveGoalReference(expense, goals);
+    const goalName = expenseType === "goal-allocation"
+      ? goalRef.goalName || "Goal"
+      : "";
+    const name = String(expense.name || "").trim()
+      || (expenseType === "goal-allocation" && goalName ? `Allocation to ${goalName}` : "");
+
+    return {
+      id: expense.id || createId("expense"),
+      personId: normalizePersonId(expense.personId, validIds),
+      name,
+      category: expenseType === "goal-allocation"
+        ? "Goals"
+        : (String(expense.category || "Other").trim() || "Other"),
+      amount: Number(expense.amount) || 0,
+      createdAt: expense.createdAt || new Date().toISOString(),
+      expenseType,
+      goalId: expenseType === "goal-allocation" ? goalRef.goalId : "",
+      goalName
+    };
+  }).filter((expense) => expense.name && expense.amount > 0);
+}
+
+function isGoalAllocation(expense) {
+  return expense.expenseType === "goal-allocation";
 }
 
 function getData() {
@@ -160,12 +203,13 @@ function getData() {
 
     const people = normalizePeople(parsed.people);
     const validIds = new Set(people.map((person) => person.id));
+    const goals = normalizeGoals(parsed.goals);
 
     return {
       people,
       incomes: normalizeIncomes(parsed.incomes, validIds),
-      expenses: normalizeExpenses(parsed.expenses, validIds),
-      goals: normalizeGoals(parsed.goals)
+      expenses: normalizeExpenses(parsed.expenses, validIds, goals),
+      goals
     };
   } catch (error) {
     return emptyData;
@@ -189,12 +233,20 @@ function getPersonName(data, personId) {
   return person ? person.name : "Shared";
 }
 
+function getGoalName(data, goalId, fallbackName) {
+  const goal = data.goals.find((entry) => entry.id === goalId);
+  return goal ? goal.name : (fallbackName || "Goal");
+}
+
 function getPersonStats(data, personId) {
   const incomes = data.incomes.filter((income) => income.personId === personId);
   const expenses = data.expenses.filter((expense) => expense.personId === personId);
 
   const incomeTotal = incomes.reduce((sum, income) => sum + income.amount, 0);
   const expenseTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const goalAllocated = expenses.reduce((sum, expense) => {
+    return sum + (isGoalAllocation(expense) ? expense.amount : 0);
+  }, 0);
 
   return {
     id: personId,
@@ -202,9 +254,24 @@ function getPersonStats(data, personId) {
     income: incomeTotal,
     expenses: expenseTotal,
     available: incomeTotal - expenseTotal,
+    goalAllocated,
     incomeCount: incomes.length,
     expenseCount: expenses.length
   };
+}
+
+function getGoalAllocationMap(data) {
+  const allocationMap = new Map();
+
+  data.expenses.forEach((expense) => {
+    if (!isGoalAllocation(expense) || !expense.goalId) {
+      return;
+    }
+
+    allocationMap.set(expense.goalId, (allocationMap.get(expense.goalId) || 0) + expense.amount);
+  });
+
+  return allocationMap;
 }
 
 function calculateTotals(data) {
@@ -212,6 +279,9 @@ function calculateTotals(data) {
   const householdExpenses = data.expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const householdAvailable = householdIncome - householdExpenses;
   const totalGoalTarget = data.goals.reduce((sum, goal) => sum + goal.amount, 0);
+  const totalGoalAllocated = data.expenses.reduce((sum, expense) => {
+    return sum + (isGoalAllocation(expense) ? expense.amount : 0);
+  }, 0);
   const personStats = data.people.map((person) => getPersonStats(data, person.id));
   const sharedStats = getPersonStats(data, SHARED_PERSON_ID);
   const deductionRate = householdIncome > 0 ? (householdExpenses / householdIncome) * 100 : 0;
@@ -222,6 +292,7 @@ function calculateTotals(data) {
     householdExpenses,
     householdAvailable,
     totalGoalTarget,
+    totalGoalAllocated,
     deductionRate,
     comparisonBase,
     personStats,
@@ -270,12 +341,84 @@ function populatePersonSelect(selectId, data, placeholder, includeShared = false
 
   select.innerHTML = options.join("");
 
-  if (currentValue && (data.people.some((person) => person.id === currentValue) || currentValue === SHARED_PERSON_ID)) {
+  const currentMatchesPerson = data.people.some((person) => person.id === currentValue);
+  const currentMatchesShared = includeShared && currentValue === SHARED_PERSON_ID;
+
+  if (currentValue && (currentMatchesPerson || currentMatchesShared)) {
     select.value = currentValue;
   } else if (!placeholder && data.people[0]) {
     select.value = data.people[0].id;
   } else {
     select.value = "";
+  }
+}
+
+function populateGoalSelect(data) {
+  const select = byId("expense-goal-id");
+
+  if (!select) {
+    return;
+  }
+
+  const currentValue = select.value;
+
+  if (!data.goals.length) {
+    select.innerHTML = '<option value="">Add a goal first</option>';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  select.innerHTML = [
+    '<option value="">Select a goal</option>',
+    ...data.goals.map((goal) => `<option value="${escapeHtml(goal.id)}">${escapeHtml(goal.name)}</option>`)
+  ].join("");
+
+  if (currentValue && data.goals.some((goal) => goal.id === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function updateExpenseFormState() {
+  const typeSelect = byId("expense-type");
+  const goalWrap = byId("expense-goal-wrap");
+  const goalSelect = byId("expense-goal-id");
+  const categoryInput = byId("expense-category");
+  const note = byId("expense-type-note");
+
+  if (!typeSelect) {
+    return;
+  }
+
+  const isAllocation = typeSelect.value === "goal-allocation";
+
+  if (goalWrap) {
+    goalWrap.style.display = isAllocation ? "grid" : "none";
+  }
+
+  if (goalSelect) {
+    goalSelect.required = isAllocation;
+    if (!isAllocation) {
+      goalSelect.value = "";
+    }
+  }
+
+  if (categoryInput) {
+    if (isAllocation) {
+      categoryInput.value = "Goals";
+      categoryInput.disabled = true;
+    } else {
+      categoryInput.disabled = false;
+      if (categoryInput.value === "Goals") {
+        categoryInput.value = "Home & Food";
+      }
+    }
+  }
+
+  if (note) {
+    note.textContent = isAllocation
+      ? "This entry will count as money allocated to the selected goal and will reduce available funds immediately."
+      : "Regular expenses reduce the payer's available balance and also the household available balance.";
   }
 }
 
@@ -287,6 +430,7 @@ function buildBalanceCards(totals, showShared) {
       <div class="person-meta">
         <span>Income: ${formatCurrency(stat.income)}</span>
         <span>Expenses: ${formatCurrency(stat.expenses)}</span>
+        ${stat.goalAllocated > 0 ? `<span>Goals allocated: ${formatCurrency(stat.goalAllocated)}</span>` : ""}
       </div>
     </article>
   `);
@@ -299,6 +443,7 @@ function buildBalanceCards(totals, showShared) {
         <div class="person-meta">
           <span>Income: ${formatCurrency(totals.sharedStats.income)}</span>
           <span>Expenses: ${formatCurrency(totals.sharedStats.expenses)}</span>
+          ${totals.sharedStats.goalAllocated > 0 ? `<span>Goals allocated: ${formatCurrency(totals.sharedStats.goalAllocated)}</span>` : ""}
         </div>
       </article>
     `);
@@ -337,6 +482,23 @@ function buildSummaryList(data, totals, kind) {
   `).join("");
 }
 
+function buildExpenseMeta(item, data) {
+  if (isGoalAllocation(item)) {
+    return [
+      escapeHtml(getPersonName(data, item.personId)),
+      "Goal Allocation",
+      escapeHtml(getGoalName(data, item.goalId, item.goalName)),
+      formatDate(item.createdAt)
+    ].map((value) => `<span>${value}</span>`).join("");
+  }
+
+  return [
+    escapeHtml(getPersonName(data, item.personId)),
+    escapeHtml(item.category),
+    formatDate(item.createdAt)
+  ].map((value) => `<span>${value}</span>`).join("");
+}
+
 function buildActivityList(items, data, kind, emptyCopy) {
   if (!items.length) {
     return `<div class="empty-state">${emptyCopy}</div>`;
@@ -347,9 +509,9 @@ function buildActivityList(items, data, kind, emptyCopy) {
       <div>
         <strong>${escapeHtml(item.name)}</strong>
         <div class="item-meta">
-          <span>${escapeHtml(getPersonName(data, item.personId))}</span>
-          ${kind === "expense" ? `<span>${escapeHtml(item.category)}</span>` : ""}
-          <span>${formatDate(item.createdAt)}</span>
+          ${kind === "expense"
+            ? buildExpenseMeta(item, data)
+            : `<span>${escapeHtml(getPersonName(data, item.personId))}</span><span>${formatDate(item.createdAt)}</span>`}
         </div>
       </div>
       <strong>${formatCurrency(item.amount)}</strong>
@@ -369,9 +531,9 @@ function buildManageList(items, data, kind, emptyCopy) {
       <div>
         <strong>${escapeHtml(item.name)}</strong>
         <div class="item-meta">
-          <span>${escapeHtml(getPersonName(data, item.personId))}</span>
-          ${kind === "expense" ? `<span>${escapeHtml(item.category)}</span>` : ""}
-          <span>${formatDate(item.createdAt)}</span>
+          ${kind === "expense"
+            ? buildExpenseMeta(item, data)
+            : `<span>${escapeHtml(getPersonName(data, item.personId))}</span><span>${formatDate(item.createdAt)}</span>`}
         </div>
       </div>
       <div style="text-align: right;">
@@ -484,6 +646,7 @@ function buildSavingsList(totals) {
           <div class="item-meta">
             <span>Income ${formatCurrency(stat.income)}</span>
             <span>Expenses ${formatCurrency(stat.expenses)}</span>
+            ${stat.goalAllocated > 0 ? `<span>Goal allocations ${formatCurrency(stat.goalAllocated)}</span>` : ""}
           </div>
         </div>
         <div style="text-align: right;">
@@ -513,16 +676,19 @@ function buildSavingsList(totals) {
   return rows.join("");
 }
 
-function buildGoalCards(data, totals) {
+function buildGoalCards(data) {
   if (!data.goals.length) {
-    return '<div class="empty-state">No goals added yet. Add your first target to see progress against the household available balance.</div>';
+    return '<div class="empty-state">No goals added yet. Add your first target to see progress from your goal allocations.</div>';
   }
 
+  const allocationMap = getGoalAllocationMap(data);
+
   return sortByNewest(data.goals).map((goal) => {
+    const allocated = allocationMap.get(goal.id) || 0;
     const progress = goal.amount > 0
-      ? Math.max(0, Math.min((totals.householdAvailable / goal.amount) * 100, 100))
+      ? Math.max(0, Math.min((allocated / goal.amount) * 100, 100))
       : 0;
-    const remaining = Math.max(goal.amount - totals.householdAvailable, 0);
+    const remaining = Math.max(goal.amount - allocated, 0);
     const daysLeft = goal.dueDate ? getDaysUntil(goal.dueDate) : null;
 
     let dueCopy = "No due date";
@@ -552,12 +718,12 @@ function buildGoalCards(data, totals) {
           <div class="goal-fill" style="width: ${progress}%"></div>
         </div>
         <div class="goal-meta-row">
-          <span>${progress.toFixed(1)}% funded by household available</span>
+          <span>${progress.toFixed(1)}% funded</span>
           <span>${dueCopy}</span>
         </div>
         <div class="goal-meta-row">
-          <span>Still needed</span>
-          <strong>${formatCurrency(remaining)}</strong>
+          <span>Allocated ${formatCurrency(allocated)}</span>
+          <strong>${remaining > 0 ? `${formatCurrency(remaining)} still needed` : "Fully funded"}</strong>
         </div>
       </article>
     `;
@@ -646,9 +812,12 @@ function renderExpensesPage() {
   setText("expense-household-total", formatCurrency(totals.householdExpenses));
   setText("expense-household-total-hero", formatCurrency(totals.householdExpenses));
   setText("expense-household-available", formatCurrency(totals.householdAvailable));
+  setText("expense-goal-allocated", formatCurrency(totals.totalGoalAllocated));
   setText("expense-count", `${data.expenses.length} ${data.expenses.length === 1 ? "entry" : "entries"}`);
 
   populatePersonSelect("expense-person", data, "Select who is paying", true);
+  populateGoalSelect(data);
+  updateExpenseFormState();
   setHTML("expense-balance-grid", buildBalanceCards(totals, true));
   setHTML("expense-split-list", buildSummaryList(data, totals, "expense"));
   setHTML("expense-list", buildManageList(
@@ -685,7 +854,7 @@ function renderSavingsPage() {
     if (!data.incomes.length && !data.expenses.length) {
       summary.textContent = "Add income and expenses first, and this page will show how much is still being preserved.";
     } else if (totals.householdAvailable >= 0) {
-      summary.textContent = `The household is currently holding on to ${formatCurrency(totals.householdAvailable)}.`;
+      summary.textContent = `The household is currently holding on to ${formatCurrency(totals.householdAvailable)} after all tracked expenses and goal allocations.`;
     } else {
       summary.textContent = `The household is currently overspent by ${formatCurrency(Math.abs(totals.householdAvailable))}.`;
     }
@@ -700,7 +869,7 @@ function renderGoalsPage() {
   const data = getData();
   const totals = calculateTotals(data);
   const goalCoverage = totals.totalGoalTarget > 0
-    ? Math.max(0, Math.min((totals.householdAvailable / totals.totalGoalTarget) * 100, 100))
+    ? Math.max(0, Math.min((totals.totalGoalAllocated / totals.totalGoalTarget) * 100, 100))
     : 0;
 
   setText("goals-household-available", formatCurrency(totals.householdAvailable));
@@ -708,17 +877,17 @@ function renderGoalsPage() {
   setText("goals-total-target", formatCurrency(totals.totalGoalTarget));
   setText("goals-coverage", `${goalCoverage.toFixed(1)}%`);
   setHTML("goals-balance-grid", buildBalanceCards(totals, true));
-  setHTML("goal-list", buildGoalCards(data, totals));
+  setHTML("goal-list", buildGoalCards(data));
   renderLegacyNote("goals-legacy-note", totals);
 
   const summary = byId("goals-summary");
   if (summary) {
     if (!data.goals.length) {
-      summary.textContent = "Create a goal and we will compare it against what the household has available right now.";
-    } else if (totals.householdAvailable > 0) {
-      summary.textContent = `Current household available covers ${goalCoverage.toFixed(1)}% of your combined goal targets.`;
+      summary.textContent = "Create a goal and we will compare it against the money you have actively allocated to your goals.";
+    } else if (totals.totalGoalAllocated > 0) {
+      summary.textContent = `You have allocated ${formatCurrency(totals.totalGoalAllocated)} to your goals so far. Household available is now ${formatCurrency(totals.householdAvailable)}.`;
     } else {
-      summary.textContent = "You can still create goals now, but progress will start once the household available balance turns positive.";
+      summary.textContent = "You have goals saved, but no money has been allocated to them yet from the expenses page.";
     }
   }
 }
@@ -788,15 +957,42 @@ function addExpense(event) {
   event.preventDefault();
 
   const personId = String(byId("expense-person")?.value || "").trim();
-  const name = String(byId("expense-name")?.value || "").trim();
+  const type = String(byId("expense-type")?.value || "regular").trim();
+  const nameInput = String(byId("expense-name")?.value || "").trim();
   const category = String(byId("expense-category")?.value || "").trim();
+  const goalId = String(byId("expense-goal-id")?.value || "").trim();
   const amount = Number(byId("expense-amount")?.value);
   const data = getData();
 
   const validPayer = personId === SHARED_PERSON_ID || data.people.some((person) => person.id === personId);
+  const isAllocation = type === "goal-allocation";
 
-  if (!validPayer || !name || !category || !Number.isFinite(amount) || amount <= 0) {
-    setMessage("expense-message", "Choose who is paying, add the expense details, and enter an amount above zero.", "error");
+  if (!validPayer || !Number.isFinite(amount) || amount <= 0) {
+    setMessage("expense-message", "Choose who is paying and enter an amount above zero.", "error");
+    return;
+  }
+
+  let name = nameInput;
+  let finalCategory = category || "Other";
+  let linkedGoalId = "";
+  let linkedGoalName = "";
+
+  if (isAllocation) {
+    const goal = data.goals.find((entry) => entry.id === goalId);
+
+    if (!goal) {
+      setMessage("expense-message", "Select the goal you want to allocate money to.", "error");
+      return;
+    }
+
+    linkedGoalId = goal.id;
+    linkedGoalName = goal.name;
+    finalCategory = "Goals";
+    name = name || `Allocation to ${goal.name}`;
+  }
+
+  if (!name) {
+    setMessage("expense-message", "Add a name for the expense or allocation.", "error");
     return;
   }
 
@@ -804,15 +1000,22 @@ function addExpense(event) {
     id: createId("expense"),
     personId,
     name,
-    category,
+    category: finalCategory,
     amount,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    expenseType: isAllocation ? "goal-allocation" : "regular",
+    goalId: linkedGoalId,
+    goalName: linkedGoalName
   });
 
   saveData(data);
   byId("expense-form")?.reset();
   populatePersonSelect("expense-person", data, "Select who is paying", true);
-  setMessage("expense-message", "Expense saved successfully.", "success");
+  populateGoalSelect(data);
+  updateExpenseFormState();
+  setMessage("expense-message", isAllocation
+    ? "Goal allocation saved successfully."
+    : "Expense saved successfully.", "success");
   renderAll();
 }
 
@@ -889,13 +1092,22 @@ function deleteGoal(goalId) {
     return;
   }
 
-  const confirmed = window.confirm(`Delete goal "${goal.name}"?`);
+  const linkedAllocations = data.expenses.filter((expense) => {
+    return isGoalAllocation(expense) && expense.goalId === goalId;
+  });
+  const confirmationText = linkedAllocations.length
+    ? `Delete goal "${goal.name}" and remove its ${linkedAllocations.length} linked allocation${linkedAllocations.length === 1 ? "" : "s"}?`
+    : `Delete goal "${goal.name}"?`;
+  const confirmed = window.confirm(confirmationText);
 
   if (!confirmed) {
     return;
   }
 
   data.goals = data.goals.filter((entry) => entry.id !== goalId);
+  data.expenses = data.expenses.filter((expense) => {
+    return !(isGoalAllocation(expense) && expense.goalId === goalId);
+  });
   saveData(data);
   renderAll();
 }
@@ -905,6 +1117,7 @@ function bindEvents() {
   byId("income-form")?.addEventListener("submit", addIncome);
   byId("expense-form")?.addEventListener("submit", addExpense);
   byId("goal-form")?.addEventListener("submit", addGoal);
+  byId("expense-type")?.addEventListener("change", updateExpenseFormState);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
