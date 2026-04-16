@@ -1112,12 +1112,38 @@ function deleteGoal(goalId) {
   renderAll();
 }
 
+function resetFinanceData() {
+  const code = window.prompt("Enter reset code to erase all finance data:");
+
+  if (code === null) {
+    return;
+  }
+
+  if (code !== "8681") {
+    window.alert("Incorrect reset code.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "This will delete all finance data, including incomes, expenses, goals, and household names. Continue?"
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  saveData(getEmptyData());
+  renderAll();
+  window.alert("Finance data has been reset.");
+}
+
 function bindEvents() {
   byId("member-form")?.addEventListener("submit", saveMembers);
   byId("income-form")?.addEventListener("submit", addIncome);
   byId("expense-form")?.addEventListener("submit", addExpense);
   byId("goal-form")?.addEventListener("submit", addGoal);
   byId("expense-type")?.addEventListener("change", updateExpenseFormState);
+  byId("reset-finance-button")?.addEventListener("click", resetFinanceData);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
