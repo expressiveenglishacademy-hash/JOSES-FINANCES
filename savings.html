@@ -7,17 +7,334 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --panel: rgba(15, 23, 42, 0.92);
+      --border: rgba(148, 163, 184, 0.16);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #22c55e;
+      --shadow: 0 28px 80px rgba(2, 6, 23, 0.45);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Plus Jakarta Sans", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(34, 197, 94, 0.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(30, 41, 59, 0.65), transparent 34%),
+        linear-gradient(180deg, #0f172a 0%, #020617 100%);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .container {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 4vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .brand p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 720px;
+      line-height: 1.6;
+    }
+
+    .nav {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .nav a {
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.72);
+      color: var(--muted);
+      font-weight: 600;
+      transition: 0.2s ease;
+    }
+
+    .nav a:hover,
+    .nav a.active {
+      color: #f8fafc;
+      border-color: rgba(34, 197, 94, 0.45);
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(15, 23, 42, 0.9));
+      box-shadow: 0 12px 30px rgba(34, 197, 94, 0.16);
+    }
+
+    .hero,
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 28px;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.16), rgba(15, 23, 42, 0.92));
+      border-color: rgba(34, 197, 94, 0.22);
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      color: #86efac;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .hero h2 {
+      margin: 0;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .hero-total {
+      padding: 18px 22px;
+      min-width: 240px;
+      border-radius: 22px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(34, 197, 94, 0.22);
+      text-align: right;
+    }
+
+    .hero-total span {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .hero-total strong {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      letter-spacing: -0.05em;
+    }
+
+    .stats-grid,
+    .person-grid,
+    .content-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 24px;
+    }
+
+    .person-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .content-grid {
+      grid-template-columns: 0.95fr 1.05fr;
+    }
+
+    .card { padding: 22px; }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 1.12rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-copy,
+    .stat-meta,
+    .subtle {
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+    }
+
+    .stat-value {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      margin: 0 0 10px;
+    }
+
+    .inline-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.12);
+      color: #86efac;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .person-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.74);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .shared-card {
+      border-style: dashed;
+    }
+
+    .person-kicker {
+      display: inline-flex;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .person-card strong {
+      display: block;
+      font-size: 1.9rem;
+      letter-spacing: -0.04em;
+      margin-bottom: 10px;
+    }
+
+    .person-meta {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .list-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.98rem;
+    }
+
+    .item-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .empty-state {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px dashed rgba(148, 163, 184, 0.18);
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-total {
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        width: min(100% - 20px, 100%);
+        padding: 18px 0 28px;
+      }
+
+      .hero,
+      .card {
+        padding: 18px;
+        border-radius: 20px;
+      }
+
+      .nav {
+        width: 100%;
+      }
+
+      .nav a {
+        flex: 1 1 calc(50% - 8px);
+        text-align: center;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="app">
+  <div class="container" id="savings-page">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-badge">FinanceFlow</span>
-        <h1>Savings Overview</h1>
-        <p>See how much of your income you keep, your savings percentage, and a quick performance summary.</p>
+        <h1>FinanceFlow</h1>
+        <p>See what the household is actually holding onto after all tracked income and expenses, with the split visible person by person.</p>
       </div>
-
       <nav class="nav">
         <a href="index.html">Dashboard</a>
         <a href="income.html">Income</a>
@@ -27,55 +344,82 @@
       </nav>
     </header>
 
-    <section class="hero hero-savings">
+    <section class="hero">
       <div>
-        <div class="hero-tag">Savings summary</div>
-        <h2>Know exactly how much you are keeping.</h2>
-        <p>This page calculates total savings as income minus expenses and safely handles empty data and zero income.</p>
+        <div class="hero-tag">Savings view</div>
+        <h2>Watch the household available balance and each person's contribution to it.</h2>
+        <p>The total here is the same amount the rest of the app uses as what is still available right now.</p>
+      </div>
+      <div class="hero-total">
+        <span>Household Available</span>
+        <strong id="savings-household-available">$0.00</strong>
       </div>
     </section>
 
-    <section class="stats-grid three">
+    <section class="stats-grid">
       <article class="card">
-        <div class="metric-label">Total Income</div>
-        <p class="metric-value" id="savings-income">$0.00</p>
-        <p class="metric-meta">All income sources combined.</p>
+        <div class="stat-label">Household Income</div>
+        <p class="stat-value" id="savings-income-total">$0.00</p>
+        <p class="stat-meta">Everything added across both people.</p>
       </article>
-
       <article class="card">
-        <div class="metric-label">Total Expenses</div>
-        <p class="metric-value" id="savings-expenses">$0.00</p>
-        <p class="metric-meta">Everything you have spent so far.</p>
+        <div class="stat-label">Household Expenses</div>
+        <p class="stat-value" id="savings-expense-total">$0.00</p>
+        <p class="stat-meta">Everything that has been assigned out.</p>
       </article>
-
       <article class="card">
-        <div class="metric-label">Total Savings</div>
-        <p class="metric-value" id="savings-total">$0.00</p>
-        <p class="metric-meta">Available money left after expenses.</p>
+        <div class="stat-label">Savings Rate</div>
+        <p class="stat-value" id="savings-rate">0.0%</p>
+        <p class="stat-meta">Available balance as a share of income.</p>
       </article>
     </section>
 
-    <section class="grid-2">
+    <section class="card" style="margin-bottom: 24px;">
+      <div class="inline-head">
+        <h3 class="section-title" style="margin: 0;">Available Balance By Person</h3>
+        <span class="badge">Current snapshot</span>
+      </div>
+      <p class="section-copy" id="savings-summary">Add income and expenses first, and this page will show how much is still being preserved.</p>
+      <div id="savings-balance-grid" class="person-grid" style="margin-top: 18px;"></div>
+      <p id="savings-legacy-note" class="subtle" style="display: none; margin-top: 18px;"></p>
+    </section>
+
+    <section class="content-grid">
       <article class="card">
-        <h3 class="section-title">Savings Performance</h3>
-        <p class="metric-meta" id="savings-copy">Add income and expenses to start tracking your savings performance.</p>
-
-        <div class="progress-track large" style="margin: 18px 0 14px;">
-          <div class="progress-fill fill-savings" id="savings-progress"></div>
+        <h3 class="section-title">Savings Contribution Split</h3>
+        <p class="section-copy" style="margin-bottom: 18px;">This helps you see who currently has more of the remaining available balance.</p>
+        <div id="savings-split-list" class="list">
+          <div class="empty-state">No data yet. Add income and expenses to populate this section.</div>
         </div>
-
-        <p class="metric-value" id="savings-rate" style="font-size: clamp(1.6rem, 4vw, 2.2rem);">0%</p>
-        <p class="metric-meta" id="savings-suggestion">You are saving 0% of your income.</p>
-        <div id="savings-status" class="status-pill status-warn" style="margin-top: 14px;">No income yet</div>
       </article>
 
       <article class="card">
-        <h3 class="section-title">Quick Guidance</h3>
-
-        <div class="tip-list">
-          <div class="tip" id="tip-one">Once income is added, this page will show how much of it you keep after expenses.</div>
-          <div class="tip" id="tip-two">Your savings rate updates across every page automatically because all data is shared with localStorage.</div>
-          <div class="tip" id="tip-three">Keep expenses lower than income to maintain positive progress for savings and goals.</div>
+        <h3 class="section-title">How To Read This</h3>
+        <div class="list">
+          <div class="list-item">
+            <div>
+              <strong>Household available</strong>
+              <div class="item-meta">
+                <span>Income minus expenses across everyone</span>
+              </div>
+            </div>
+          </div>
+          <div class="list-item">
+            <div>
+              <strong>Per-person available</strong>
+              <div class="item-meta">
+                <span>Only that person's own income minus their own expenses</span>
+              </div>
+            </div>
+          </div>
+          <div class="list-item">
+            <div>
+              <strong>Shared</strong>
+              <div class="item-meta">
+                <span>Older entries that existed before this split mode</span>
+              </div>
+            </div>
+          </div>
         </div>
       </article>
     </section>
