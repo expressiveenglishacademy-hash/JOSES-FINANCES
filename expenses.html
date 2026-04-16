@@ -13,7 +13,7 @@
       --border: rgba(148, 163, 184, 0.16);
       --text: #e2e8f0;
       --muted: #94a3b8;
-      --accent: #38bdf8;
+      --accent: #fb7185;
       --shadow: 0 28px 80px rgba(2, 6, 23, 0.45);
       --radius: 24px;
     }
@@ -26,7 +26,7 @@
       font-family: "Plus Jakarta Sans", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 30%),
+        radial-gradient(circle at top left, rgba(251, 113, 133, 0.16), transparent 30%),
         radial-gradient(circle at top right, rgba(30, 41, 59, 0.65), transparent 34%),
         linear-gradient(180deg, #0f172a 0%, #020617 100%);
     }
@@ -81,9 +81,9 @@
     .nav a:hover,
     .nav a.active {
       color: #f8fafc;
-      border-color: rgba(56, 189, 248, 0.45);
-      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(15, 23, 42, 0.9));
-      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.16);
+      border-color: rgba(251, 113, 133, 0.4);
+      background: linear-gradient(135deg, rgba(251, 113, 133, 0.16), rgba(15, 23, 42, 0.9));
+      box-shadow: 0 12px 30px rgba(251, 113, 133, 0.16);
     }
 
     .hero,
@@ -102,7 +102,7 @@
       align-items: center;
       padding: 28px;
       margin-bottom: 24px;
-      background: linear-gradient(135deg, rgba(251, 113, 133, 0.14), rgba(15, 23, 42, 0.92));
+      background: linear-gradient(135deg, rgba(251, 113, 133, 0.16), rgba(15, 23, 42, 0.92));
       border-color: rgba(251, 113, 133, 0.18);
     }
 
@@ -277,8 +277,8 @@
 
     input:focus,
     select:focus {
-      border-color: rgba(56, 189, 248, 0.55);
-      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+      border-color: rgba(251, 113, 133, 0.45);
+      box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.12);
     }
 
     .button {
@@ -296,6 +296,14 @@
     .button:hover {
       transform: translateY(-1px);
       box-shadow: 0 16px 30px rgba(56, 189, 248, 0.26);
+    }
+
+    .button-danger {
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: rgba(251, 113, 133, 0.14);
+      color: #fda4af;
+      box-shadow: none;
     }
 
     .message {
@@ -406,12 +414,14 @@
     <header class="topbar">
       <div class="brand">
         <h1>FinanceFlow</h1>
-        <p>Assign every expense to the person actually covering it, so each available balance stays accurate while the household total updates too.</p>
+        <p>Assign every expense to the person actually covering it, or mark it as shared when both of you are paying together.</p>
       </div>
       <nav class="nav">
         <a href="index.html">Dashboard</a>
         <a href="income.html">Income</a>
         <a class="active" href="expenses.html">Expenses</a>
+        <a href="savings.html">Savings</a>
+        <a href="goals.html">Goals</a>
       </nav>
     </header>
 
@@ -419,11 +429,11 @@
       <div>
         <div class="hero-tag">Expense split</div>
         <h2>Track spending without losing sight of who paid what.</h2>
-        <p>When you choose who is covering an expense, that amount is removed from that person's available balance automatically.</p>
+        <p>Choose one person when they covered the expense alone, or use <strong>Shared expense</strong> when both of you are taking it on together.</p>
       </div>
       <div class="hero-total">
         <span>Household Expenses</span>
-        <strong id="expense-household-total">$0.00</strong>
+        <strong id="expense-household-total-hero">$0.00</strong>
       </div>
     </section>
 
@@ -436,12 +446,12 @@
       <article class="card">
         <div class="stat-label">Household Available</div>
         <p class="stat-value" id="expense-household-available">$0.00</p>
-        <p class="stat-meta">What the household still has left after assigned expenses.</p>
+        <p class="stat-meta">What the household still has left after expenses.</p>
       </article>
       <article class="card">
         <div class="stat-label">Expense Entries</div>
         <p class="stat-value" id="expense-count">0 entries</p>
-        <p class="stat-meta">Each expense is linked to one person responsible for the payment.</p>
+        <p class="stat-meta">Every entry can now be deleted individually.</p>
       </article>
     </section>
 
@@ -450,7 +460,7 @@
         <h3 class="section-title" style="margin: 0;">Available Balance By Person</h3>
         <span class="badge">Who pays what</span>
       </div>
-      <p class="section-copy">Use this section to see instantly whose balance changed after an expense was assigned.</p>
+      <p class="section-copy">This section lets you see immediately whose available balance changed after a payment was assigned.</p>
       <div id="expense-balance-grid" class="person-grid" style="margin-top: 18px;"></div>
       <p id="expense-legacy-note" class="subtle" style="display: none; margin-top: 18px;"></p>
     </section>
@@ -458,7 +468,7 @@
     <section class="layout">
       <article class="card">
         <h3 class="section-title">Add Expense</h3>
-        <p class="section-copy" style="margin-bottom: 18px;">Choose who is responsible for the payment before saving it.</p>
+        <p class="section-copy" style="margin-bottom: 18px;">Pick the payer first. If it is a joint bill, choose <strong>Shared expense</strong>.</p>
         <form id="expense-form" class="form-grid">
           <label>
             Who Is Paying
@@ -501,7 +511,7 @@
 
         <article class="card">
           <h3 class="section-title">Category Breakdown</h3>
-          <p class="section-copy" style="margin-bottom: 18px;">This chart shows all expenses combined by category, even though each one is assigned to a specific person.</p>
+          <p class="section-copy" style="margin-bottom: 18px;">The chart still groups all expenses by category, even when the payer is shared.</p>
           <div class="chart-wrap">
             <canvas id="expense-chart"></canvas>
             <div id="expense-chart-empty" class="chart-empty">Add expenses to generate the category chart.</div>
