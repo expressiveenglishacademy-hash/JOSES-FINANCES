@@ -82,6 +82,20 @@ function formatDate(value) {
   });
 }
 
+function getDaysUntil(value) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+
+  return Math.ceil((target - today) / 86400000);
+}
+
 function normalizePeople(rawPeople) {
   const source = Array.isArray(rawPeople) ? rawPeople.slice(0, 2) : [];
   const normalized = DEFAULT_PEOPLE.map((fallback, index) => {
@@ -108,6 +122,7 @@ function normalizeGoals(rawGoals) {
     id: goal.id || createId("goal"),
     name: String(goal.name || "").trim(),
     amount: Number(goal.amount) || 0,
+    dueDate: goal.dueDate || "",
     createdAt: goal.createdAt || new Date().toISOString()
   })).filter((goal) => goal.name && goal.amount > 0);
 }
@@ -196,6 +211,7 @@ function calculateTotals(data) {
   const householdIncome = data.incomes.reduce((sum, income) => sum + income.amount, 0);
   const householdExpenses = data.expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const householdAvailable = householdIncome - householdExpenses;
+  const totalGoalTarget = data.goals.reduce((sum, goal) => sum + goal.amount, 0);
   const personStats = data.people.map((person) => getPersonStats(data, person.id));
   const sharedStats = getPersonStats(data, SHARED_PERSON_ID);
   const deductionRate = householdIncome > 0 ? (householdExpenses / householdIncome) * 100 : 0;
@@ -205,6 +221,7 @@ function calculateTotals(data) {
     householdIncome,
     householdExpenses,
     householdAvailable,
+    totalGoalTarget,
     deductionRate,
     comparisonBase,
     personStats,
@@ -229,7 +246,7 @@ function sortByNewest(items) {
   });
 }
 
-function populatePersonSelect(selectId, data, placeholder) {
+function populatePersonSelect(selectId, data, placeholder, includeShared = false) {
   const select = byId(selectId);
 
   if (!select) {
@@ -247,9 +264,13 @@ function populatePersonSelect(selectId, data, placeholder) {
     options.push(`<option value="${escapeHtml(person.id)}">${escapeHtml(person.name)}</option>`);
   });
 
+  if (includeShared) {
+    options.push(`<option value="${SHARED_PERSON_ID}">Shared expense</option>`);
+  }
+
   select.innerHTML = options.join("");
 
-  if (currentValue && data.people.some((person) => person.id === currentValue)) {
+  if (currentValue && (data.people.some((person) => person.id === currentValue) || currentValue === SHARED_PERSON_ID)) {
     select.value = currentValue;
   } else if (!placeholder && data.people[0]) {
     select.value = data.people[0].id;
@@ -332,6 +353,33 @@ function buildActivityList(items, data, kind, emptyCopy) {
         </div>
       </div>
       <strong>${formatCurrency(item.amount)}</strong>
+    </div>
+  `).join("");
+}
+
+function buildManageList(items, data, kind, emptyCopy) {
+  if (!items.length) {
+    return `<div class="empty-state">${emptyCopy}</div>`;
+  }
+
+  const deleteHandler = kind === "income" ? "deleteIncome" : "deleteExpense";
+
+  return items.map((item) => `
+    <div class="list-item">
+      <div>
+        <strong>${escapeHtml(item.name)}</strong>
+        <div class="item-meta">
+          <span>${escapeHtml(getPersonName(data, item.personId))}</span>
+          ${kind === "expense" ? `<span>${escapeHtml(item.category)}</span>` : ""}
+          <span>${formatDate(item.createdAt)}</span>
+        </div>
+      </div>
+      <div style="text-align: right;">
+        <strong>${formatCurrency(item.amount)}</strong>
+        <div style="margin-top: 10px;">
+          <button type="button" class="button button-danger" onclick="${deleteHandler}('${item.id}')">Delete</button>
+        </div>
+      </div>
     </div>
   `).join("");
 }
@@ -423,6 +471,99 @@ function renderExpenseChart(expenses) {
   });
 }
 
+function buildSavingsList(totals) {
+  const rows = totals.personStats.map((stat) => {
+    const contribution = totals.householdAvailable !== 0
+      ? Math.max(0, (stat.available / totals.householdAvailable) * 100)
+      : 0;
+
+    return `
+      <div class="list-item">
+        <div>
+          <strong>${escapeHtml(stat.name)}</strong>
+          <div class="item-meta">
+            <span>Income ${formatCurrency(stat.income)}</span>
+            <span>Expenses ${formatCurrency(stat.expenses)}</span>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <strong>${formatCurrency(stat.available)}</strong>
+          <div class="item-meta" style="justify-content: flex-end;">
+            <span>${contribution.toFixed(1)}% of household available</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  if (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0) {
+    rows.push(`
+      <div class="list-item">
+        <div>
+          <strong>Shared</strong>
+          <div class="item-meta">
+            <span>Legacy household entries kept unassigned</span>
+          </div>
+        </div>
+        <strong>${formatCurrency(totals.sharedStats.available)}</strong>
+      </div>
+    `);
+  }
+
+  return rows.join("");
+}
+
+function buildGoalCards(data, totals) {
+  if (!data.goals.length) {
+    return '<div class="empty-state">No goals added yet. Add your first target to see progress against the household available balance.</div>';
+  }
+
+  return sortByNewest(data.goals).map((goal) => {
+    const progress = goal.amount > 0
+      ? Math.max(0, Math.min((totals.householdAvailable / goal.amount) * 100, 100))
+      : 0;
+    const remaining = Math.max(goal.amount - totals.householdAvailable, 0);
+    const daysLeft = goal.dueDate ? getDaysUntil(goal.dueDate) : null;
+
+    let dueCopy = "No due date";
+    if (daysLeft !== null) {
+      if (daysLeft < 0) {
+        dueCopy = `${Math.abs(daysLeft)} days overdue`;
+      } else if (daysLeft === 0) {
+        dueCopy = "Due today";
+      } else {
+        dueCopy = `${daysLeft} days left`;
+      }
+    }
+
+    return `
+      <article class="goal-card">
+        <div class="goal-head">
+          <div>
+            <strong>${escapeHtml(goal.name)}</strong>
+            <div class="item-meta">
+              <span>Target ${formatCurrency(goal.amount)}</span>
+              <span>${goal.dueDate ? formatDate(goal.dueDate) : "No due date"}</span>
+            </div>
+          </div>
+          <button type="button" class="button button-danger" onclick="deleteGoal('${goal.id}')">Delete</button>
+        </div>
+        <div class="goal-track">
+          <div class="goal-fill" style="width: ${progress}%"></div>
+        </div>
+        <div class="goal-meta-row">
+          <span>${progress.toFixed(1)}% funded by household available</span>
+          <span>${dueCopy}</span>
+        </div>
+        <div class="goal-meta-row">
+          <span>Still needed</span>
+          <strong>${formatCurrency(remaining)}</strong>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
 function renderDashboard() {
   if (!byId("dashboard-page")) {
     return;
@@ -485,7 +626,7 @@ function renderIncomePage() {
   populatePersonSelect("income-person", data, "Select who received it");
   setHTML("income-balance-grid", buildBalanceCards(totals, true));
   setHTML("income-split-list", buildSummaryList(data, totals, "income"));
-  setHTML("income-list", buildActivityList(
+  setHTML("income-list", buildManageList(
     sortByNewest(data.incomes),
     data,
     "income",
@@ -503,13 +644,14 @@ function renderExpensesPage() {
   const totals = calculateTotals(data);
 
   setText("expense-household-total", formatCurrency(totals.householdExpenses));
+  setText("expense-household-total-hero", formatCurrency(totals.householdExpenses));
   setText("expense-household-available", formatCurrency(totals.householdAvailable));
   setText("expense-count", `${data.expenses.length} ${data.expenses.length === 1 ? "entry" : "entries"}`);
 
-  populatePersonSelect("expense-person", data, "Select who is paying");
+  populatePersonSelect("expense-person", data, "Select who is paying", true);
   setHTML("expense-balance-grid", buildBalanceCards(totals, true));
   setHTML("expense-split-list", buildSummaryList(data, totals, "expense"));
-  setHTML("expense-list", buildActivityList(
+  setHTML("expense-list", buildManageList(
     sortByNewest(data.expenses),
     data,
     "expense",
@@ -519,10 +661,74 @@ function renderExpensesPage() {
   renderExpenseChart(data.expenses);
 }
 
+function renderSavingsPage() {
+  if (!byId("savings-page")) {
+    return;
+  }
+
+  const data = getData();
+  const totals = calculateTotals(data);
+  const savingsRate = totals.householdIncome > 0
+    ? Math.max((totals.householdAvailable / totals.householdIncome) * 100, 0)
+    : 0;
+
+  setText("savings-household-available", formatCurrency(totals.householdAvailable));
+  setText("savings-income-total", formatCurrency(totals.householdIncome));
+  setText("savings-expense-total", formatCurrency(totals.householdExpenses));
+  setText("savings-rate", `${savingsRate.toFixed(1)}%`);
+  setHTML("savings-balance-grid", buildBalanceCards(totals, true));
+  setHTML("savings-split-list", buildSavingsList(totals));
+  renderLegacyNote("savings-legacy-note", totals);
+
+  const summary = byId("savings-summary");
+  if (summary) {
+    if (!data.incomes.length && !data.expenses.length) {
+      summary.textContent = "Add income and expenses first, and this page will show how much is still being preserved.";
+    } else if (totals.householdAvailable >= 0) {
+      summary.textContent = `The household is currently holding on to ${formatCurrency(totals.householdAvailable)}.`;
+    } else {
+      summary.textContent = `The household is currently overspent by ${formatCurrency(Math.abs(totals.householdAvailable))}.`;
+    }
+  }
+}
+
+function renderGoalsPage() {
+  if (!byId("goals-page")) {
+    return;
+  }
+
+  const data = getData();
+  const totals = calculateTotals(data);
+  const goalCoverage = totals.totalGoalTarget > 0
+    ? Math.max(0, Math.min((totals.householdAvailable / totals.totalGoalTarget) * 100, 100))
+    : 0;
+
+  setText("goals-household-available", formatCurrency(totals.householdAvailable));
+  setText("goals-count", `${data.goals.length} ${data.goals.length === 1 ? "goal" : "goals"}`);
+  setText("goals-total-target", formatCurrency(totals.totalGoalTarget));
+  setText("goals-coverage", `${goalCoverage.toFixed(1)}%`);
+  setHTML("goals-balance-grid", buildBalanceCards(totals, true));
+  setHTML("goal-list", buildGoalCards(data, totals));
+  renderLegacyNote("goals-legacy-note", totals);
+
+  const summary = byId("goals-summary");
+  if (summary) {
+    if (!data.goals.length) {
+      summary.textContent = "Create a goal and we will compare it against what the household has available right now.";
+    } else if (totals.householdAvailable > 0) {
+      summary.textContent = `Current household available covers ${goalCoverage.toFixed(1)}% of your combined goal targets.`;
+    } else {
+      summary.textContent = "You can still create goals now, but progress will start once the household available balance turns positive.";
+    }
+  }
+}
+
 function renderAll() {
   renderDashboard();
   renderIncomePage();
   renderExpensesPage();
+  renderSavingsPage();
+  renderGoalsPage();
 }
 
 function saveMembers(event) {
@@ -587,7 +793,9 @@ function addExpense(event) {
   const amount = Number(byId("expense-amount")?.value);
   const data = getData();
 
-  if (!data.people.some((person) => person.id === personId) || !name || !category || !Number.isFinite(amount) || amount <= 0) {
+  const validPayer = personId === SHARED_PERSON_ID || data.people.some((person) => person.id === personId);
+
+  if (!validPayer || !name || !category || !Number.isFinite(amount) || amount <= 0) {
     setMessage("expense-message", "Choose who is paying, add the expense details, and enter an amount above zero.", "error");
     return;
   }
@@ -603,8 +811,92 @@ function addExpense(event) {
 
   saveData(data);
   byId("expense-form")?.reset();
-  populatePersonSelect("expense-person", data, "Select who is paying");
+  populatePersonSelect("expense-person", data, "Select who is paying", true);
   setMessage("expense-message", "Expense saved successfully.", "success");
+  renderAll();
+}
+
+function deleteIncome(incomeId) {
+  const data = getData();
+  const income = data.incomes.find((entry) => entry.id === incomeId);
+
+  if (!income) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete income "${income.name}"?`);
+
+  if (!confirmed) {
+    return;
+  }
+
+  data.incomes = data.incomes.filter((entry) => entry.id !== incomeId);
+  saveData(data);
+  renderAll();
+}
+
+function deleteExpense(expenseId) {
+  const data = getData();
+  const expense = data.expenses.find((entry) => entry.id === expenseId);
+
+  if (!expense) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete expense "${expense.name}"?`);
+
+  if (!confirmed) {
+    return;
+  }
+
+  data.expenses = data.expenses.filter((entry) => entry.id !== expenseId);
+  saveData(data);
+  renderAll();
+}
+
+function addGoal(event) {
+  event.preventDefault();
+
+  const name = String(byId("goal-name")?.value || "").trim();
+  const amount = Number(byId("goal-amount")?.value);
+  const dueDate = String(byId("goal-due-date")?.value || "").trim();
+  const data = getData();
+
+  if (!name || !Number.isFinite(amount) || amount <= 0) {
+    setMessage("goal-message", "Add a goal name and an amount above zero.", "error");
+    return;
+  }
+
+  data.goals.unshift({
+    id: createId("goal"),
+    name,
+    amount,
+    dueDate,
+    createdAt: new Date().toISOString()
+  });
+
+  saveData(data);
+  byId("goal-form")?.reset();
+  setMessage("goal-message", "Goal saved successfully.", "success");
+  renderAll();
+}
+
+function deleteGoal(goalId) {
+  const data = getData();
+  const goal = data.goals.find((entry) => entry.id === goalId);
+
+  if (!goal) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete goal "${goal.name}"?`);
+
+  if (!confirmed) {
+    return;
+  }
+
+  data.goals = data.goals.filter((entry) => entry.id !== goalId);
+  saveData(data);
   renderAll();
 }
 
@@ -612,6 +904,7 @@ function bindEvents() {
   byId("member-form")?.addEventListener("submit", saveMembers);
   byId("income-form")?.addEventListener("submit", addIncome);
   byId("expense-form")?.addEventListener("submit", addExpense);
+  byId("goal-form")?.addEventListener("submit", addGoal);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -621,3 +914,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 window.addEventListener("storage", renderAll);
+window.deleteIncome = deleteIncome;
+window.deleteExpense = deleteExpense;
+window.deleteGoal = deleteGoal;
