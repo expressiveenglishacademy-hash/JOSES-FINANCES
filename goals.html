@@ -7,17 +7,429 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --panel: rgba(15, 23, 42, 0.92);
+      --border: rgba(148, 163, 184, 0.16);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #f59e0b;
+      --shadow: 0 28px 80px rgba(2, 6, 23, 0.45);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Plus Jakarta Sans", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(245, 158, 11, 0.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(30, 41, 59, 0.65), transparent 34%),
+        linear-gradient(180deg, #0f172a 0%, #020617 100%);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .container {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 4vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .brand p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 720px;
+      line-height: 1.6;
+    }
+
+    .nav {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .nav a {
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.72);
+      color: var(--muted);
+      font-weight: 600;
+      transition: 0.2s ease;
+    }
+
+    .nav a:hover,
+    .nav a.active {
+      color: #f8fafc;
+      border-color: rgba(245, 158, 11, 0.45);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(15, 23, 42, 0.9));
+      box-shadow: 0 12px 30px rgba(245, 158, 11, 0.16);
+    }
+
+    .hero,
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 28px;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(15, 23, 42, 0.92));
+      border-color: rgba(245, 158, 11, 0.22);
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      color: #fcd34d;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .hero h2 {
+      margin: 0;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .hero-total {
+      padding: 18px 22px;
+      min-width: 240px;
+      border-radius: 22px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(245, 158, 11, 0.22);
+      text-align: right;
+    }
+
+    .hero-total span {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .hero-total strong {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      letter-spacing: -0.05em;
+    }
+
+    .stats-grid,
+    .person-grid,
+    .layout,
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 24px;
+    }
+
+    .person-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .layout {
+      grid-template-columns: 0.9fr 1.1fr;
+    }
+
+    .card { padding: 22px; }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 1.12rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-copy,
+    .stat-meta,
+    .subtle {
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+    }
+
+    .stat-value {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      margin: 0 0 10px;
+    }
+
+    .inline-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.12);
+      color: #fcd34d;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .person-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.74);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .shared-card {
+      border-style: dashed;
+    }
+
+    .person-kicker {
+      display: inline-flex;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .person-card strong {
+      display: block;
+      font-size: 1.9rem;
+      letter-spacing: -0.04em;
+      margin-bottom: 10px;
+    }
+
+    .person-meta {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .form-grid { display: grid; gap: 14px; }
+
+    label {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text);
+      outline: none;
+      font: inherit;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input:focus {
+      border-color: rgba(245, 158, 11, 0.55);
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12);
+    }
+
+    .button {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      color: #1f1201;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 30px rgba(245, 158, 11, 0.24);
+    }
+
+    .button-danger {
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: rgba(251, 113, 133, 0.14);
+      color: #fda4af;
+      box-shadow: none;
+    }
+
+    .message {
+      min-height: 22px;
+      font-size: 0.92rem;
+      margin-top: 6px;
+    }
+
+    .error { color: #fda4af; }
+    .success { color: #86efac; }
+
+    .list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .empty-state {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px dashed rgba(148, 163, 184, 0.18);
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .goal-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      display: grid;
+      gap: 14px;
+    }
+
+    .goal-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .goal-head strong {
+      display: block;
+      font-size: 1.02rem;
+      margin-bottom: 6px;
+    }
+
+    .item-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .goal-track {
+      width: 100%;
+      height: 12px;
+      background: rgba(30, 41, 59, 0.86);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .goal-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #f59e0b, #f97316);
+      transition: width 0.35s ease;
+    }
+
+    .goal-meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .goal-meta-row strong {
+      color: var(--text);
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-total {
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        width: min(100% - 20px, 100%);
+        padding: 18px 0 28px;
+      }
+
+      .hero,
+      .card {
+        padding: 18px;
+        border-radius: 20px;
+      }
+
+      .nav {
+        width: 100%;
+      }
+
+      .nav a {
+        flex: 1 1 calc(50% - 8px);
+        text-align: center;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="app">
+  <div class="container" id="goals-page">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-badge">FinanceFlow</span>
-        <h1>Financial Goals</h1>
-        <p>Create goals with due dates and track how much money has actually been allocated to each one from the expenses page.</p>
+        <h1>FinanceFlow</h1>
+        <p>Create goals again and compare them directly against the household available balance that both of you are building together.</p>
       </div>
-
       <nav class="nav">
         <a href="index.html">Dashboard</a>
         <a href="income.html">Income</a>
@@ -27,51 +439,79 @@
       </nav>
     </header>
 
-    <section class="hero hero-goals">
+    <section class="hero">
       <div>
-        <div class="hero-tag">Goal planner</div>
-        <h2>Track real money assigned to each goal.</h2>
-        <p id="goal-available-note">Your current available funds will appear here and goal progress will be based on actual goal allocations.</p>
+        <div class="hero-tag">Goal planning</div>
+        <h2>Turn the remaining household balance into clear targets.</h2>
+        <p>Goals here are compared to the household available amount, while you can still see each person's available balance underneath.</p>
       </div>
-
       <div class="hero-total">
-        <span>Available Now</span>
-        <strong id="goal-available-now">$0.00</strong>
+        <span>Household Available</span>
+        <strong id="goals-household-available">$0.00</strong>
       </div>
     </section>
 
-    <section class="grid-2-wide">
+    <section class="stats-grid">
+      <article class="card">
+        <div class="stat-label">Goals Tracked</div>
+        <p class="stat-value" id="goals-count">0 goals</p>
+        <p class="stat-meta">All targets currently saved.</p>
+      </article>
+      <article class="card">
+        <div class="stat-label">Total Goal Target</div>
+        <p class="stat-value" id="goals-total-target">$0.00</p>
+        <p class="stat-meta">Combined amount across every goal.</p>
+      </article>
+      <article class="card">
+        <div class="stat-label">Coverage</div>
+        <p class="stat-value" id="goals-coverage">0.0%</p>
+        <p class="stat-meta">How much of your total target is covered today.</p>
+      </article>
+    </section>
+
+    <section class="card" style="margin-bottom: 24px;">
+      <div class="inline-head">
+        <h3 class="section-title" style="margin: 0;">Available Balance By Person</h3>
+        <span class="badge">Planning context</span>
+      </div>
+      <p class="section-copy" id="goals-summary">Create a goal and we will compare it against what the household has available right now.</p>
+      <div id="goals-balance-grid" class="person-grid" style="margin-top: 18px;"></div>
+      <p id="goals-legacy-note" class="subtle" style="display: none; margin-top: 18px;"></p>
+    </section>
+
+    <section class="layout">
       <article class="card">
         <h3 class="section-title">Add Goal</h3>
-
+        <p class="section-copy" style="margin-bottom: 18px;">Set a target and optional due date so you can track how close the household balance is to covering it.</p>
         <form id="goal-form" class="form-grid">
-          <label class="form-field">
+          <label>
             Goal Name
-            <input class="input" id="goal-name" type="text" placeholder="Emergency fund, trip, new laptop">
+            <input id="goal-name" type="text" placeholder="Vacation, emergency fund, car down payment">
           </label>
-
-          <label class="form-field">
-            Goal Amount
-            <input class="input" id="goal-amount" type="number" min="0" step="0.01" placeholder="0.00">
+          <label>
+            Target Amount
+            <input id="goal-amount" type="number" min="0" step="0.01" placeholder="0.00">
           </label>
-
-          <label class="form-field">
+          <label>
             Due Date
-            <input class="input" id="goal-due-date" type="date">
+            <input id="goal-due-date" type="date">
           </label>
-
           <button class="button" type="submit">Save Goal</button>
           <div id="goal-message" class="message"></div>
         </form>
       </article>
 
-      <article class="card">
-        <h3 class="section-title">Goals List</h3>
-
-        <div id="goal-list" class="list">
-          <div class="empty-state">No goals added yet. Add your first goal to track progress using real allocations.</div>
-        </div>
-      </article>
+      <div class="stack">
+        <article class="card">
+          <div class="inline-head">
+            <h3 class="section-title" style="margin: 0;">Goals List</h3>
+            <span class="badge">Live progress</span>
+          </div>
+          <div id="goal-list" class="list">
+            <div class="empty-state">No goals added yet. Add your first target to see progress against the household available balance.</div>
+          </div>
+        </article>
+      </div>
     </section>
   </div>
 
