@@ -7,122 +7,482 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --panel: rgba(15, 23, 42, 0.92);
+      --border: rgba(148, 163, 184, 0.16);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --shadow: 0 28px 80px rgba(2, 6, 23, 0.45);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Plus Jakarta Sans", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(30, 41, 59, 0.65), transparent 34%),
+        linear-gradient(180deg, #0f172a 0%, #020617 100%);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .container {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 4vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .brand p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 720px;
+      line-height: 1.6;
+    }
+
+    .nav {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .nav a {
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.72);
+      color: var(--muted);
+      font-weight: 600;
+      transition: 0.2s ease;
+    }
+
+    .nav a:hover,
+    .nav a.active {
+      color: #f8fafc;
+      border-color: rgba(56, 189, 248, 0.45);
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(15, 23, 42, 0.9));
+      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.16);
+    }
+
+    .hero,
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 28px;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, rgba(251, 113, 133, 0.14), rgba(15, 23, 42, 0.92));
+      border-color: rgba(251, 113, 133, 0.18);
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(251, 113, 133, 0.12);
+      border: 1px solid rgba(251, 113, 133, 0.18);
+      color: #fda4af;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .hero h2 {
+      margin: 0;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .hero-total {
+      padding: 18px 22px;
+      min-width: 240px;
+      border-radius: 22px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(251, 113, 133, 0.18);
+      text-align: right;
+    }
+
+    .hero-total span {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .hero-total strong {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      letter-spacing: -0.05em;
+    }
+
+    .stats-grid,
+    .person-grid,
+    .layout,
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 24px;
+    }
+
+    .person-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .layout {
+      grid-template-columns: 0.95fr 1.05fr;
+    }
+
+    .card { padding: 22px; }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 1.12rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-copy,
+    .stat-meta,
+    .subtle {
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+    }
+
+    .stat-value {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      margin: 0 0 10px;
+    }
+
+    .inline-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(251, 113, 133, 0.12);
+      color: #fda4af;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .person-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.74);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .shared-card {
+      border-style: dashed;
+    }
+
+    .person-kicker {
+      display: inline-flex;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .person-card strong {
+      display: block;
+      font-size: 1.9rem;
+      letter-spacing: -0.04em;
+      margin-bottom: 10px;
+    }
+
+    .person-meta {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .form-grid { display: grid; gap: 14px; }
+
+    label {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text);
+      outline: none;
+      font: inherit;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: rgba(56, 189, 248, 0.55);
+      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+    }
+
+    .button {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: #02111f;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 30px rgba(56, 189, 248, 0.26);
+    }
+
+    .message {
+      min-height: 22px;
+      font-size: 0.92rem;
+      margin-top: 6px;
+    }
+
+    .error { color: #fda4af; }
+    .success { color: #86efac; }
+
+    .list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .list-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.98rem;
+    }
+
+    .item-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .empty-state {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px dashed rgba(148, 163, 184, 0.18);
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .chart-wrap {
+      position: relative;
+      min-height: 320px;
+    }
+
+    .chart-empty {
+      display: none;
+      place-items: center;
+      min-height: 260px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px dashed rgba(148, 163, 184, 0.18);
+      color: var(--muted);
+      text-align: center;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-total {
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        width: min(100% - 20px, 100%);
+        padding: 18px 0 28px;
+      }
+
+      .hero,
+      .card {
+        padding: 18px;
+        border-radius: 20px;
+      }
+
+      .nav {
+        width: 100%;
+      }
+
+      .nav a {
+        flex: 1 1 calc(50% - 8px);
+        text-align: center;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="app">
+  <div class="container" id="expenses-page">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-badge">FinanceFlow</span>
-        <h1>Expense Tracker</h1>
-        <p>Add fixed expenses, variable expenses, and goal allocations. Fixed expenses can also repeat every 2 weeks.</p>
+        <h1>FinanceFlow</h1>
+        <p>Assign every expense to the person actually covering it, so each available balance stays accurate while the household total updates too.</p>
       </div>
-
       <nav class="nav">
         <a href="index.html">Dashboard</a>
         <a href="income.html">Income</a>
         <a class="active" href="expenses.html">Expenses</a>
-        <a href="savings.html">Savings</a>
-        <a href="goals.html">Goals</a>
       </nav>
     </header>
 
-    <section class="hero hero-expenses">
+    <section class="hero">
       <div>
-        <div class="hero-tag">Add expenses</div>
-        <h2>Track bills, spending, and savings transfers.</h2>
-        <p>Fixed expenses stay open until paid, variable expenses count immediately, and goal allocations move money into a selected goal.</p>
+        <div class="hero-tag">Expense split</div>
+        <h2>Track spending without losing sight of who paid what.</h2>
+        <p>When you choose who is covering an expense, that amount is removed from that person's available balance automatically.</p>
       </div>
-
       <div class="hero-total">
-        <span>Paid / Allocated</span>
-        <strong id="expense-total">$0.00</strong>
+        <span>Household Expenses</span>
+        <strong id="expense-household-total">$0.00</strong>
       </div>
     </section>
 
     <section class="stats-grid">
       <article class="card">
-        <div class="metric-label">Fixed Bills</div>
-        <p class="metric-value" id="expense-fixed-total">$0.00</p>
-        <p class="metric-meta">Registered fixed expenses.</p>
+        <div class="stat-label">Household Expenses</div>
+        <p class="stat-value" id="expense-household-total">$0.00</p>
+        <p class="stat-meta">Everything both of you have tracked as outgoing money.</p>
       </article>
-
       <article class="card">
-        <div class="metric-label">Variable Expenses</div>
-        <p class="metric-value" id="expense-variable-total">$0.00</p>
-        <p class="metric-meta">Flexible spending already counted.</p>
+        <div class="stat-label">Household Available</div>
+        <p class="stat-value" id="expense-household-available">$0.00</p>
+        <p class="stat-meta">What the household still has left after assigned expenses.</p>
       </article>
-
       <article class="card">
-        <div class="metric-label">Goal Allocations</div>
-        <p class="metric-value" id="expense-goal-total">$0.00</p>
-        <p class="metric-meta">Money reserved toward goals.</p>
-      </article>
-
-      <article class="card">
-        <div class="metric-label">Payment Alerts</div>
-        <p class="metric-value" id="expense-alert-total">0</p>
-        <p class="metric-meta" id="expense-alert-meta">No fixed bills due yet.</p>
+        <div class="stat-label">Expense Entries</div>
+        <p class="stat-value" id="expense-count">0 entries</p>
+        <p class="stat-meta">Each expense is linked to one person responsible for the payment.</p>
       </article>
     </section>
 
-    <section class="grid-2-wide">
+    <section class="card" style="margin-bottom: 24px;">
+      <div class="inline-head">
+        <h3 class="section-title" style="margin: 0;">Available Balance By Person</h3>
+        <span class="badge">Who pays what</span>
+      </div>
+      <p class="section-copy">Use this section to see instantly whose balance changed after an expense was assigned.</p>
+      <div id="expense-balance-grid" class="person-grid" style="margin-top: 18px;"></div>
+      <p id="expense-legacy-note" class="subtle" style="display: none; margin-top: 18px;"></p>
+    </section>
+
+    <section class="layout">
       <article class="card">
         <h3 class="section-title">Add Expense</h3>
-
+        <p class="section-copy" style="margin-bottom: 18px;">Choose who is responsible for the payment before saving it.</p>
         <form id="expense-form" class="form-grid">
-          <label class="form-field">
-            Expense Name
-            <input class="input" id="expense-name" type="text" placeholder="Rent, groceries, emergency fund deposit">
+          <label>
+            Who Is Paying
+            <select id="expense-person"></select>
           </label>
-
-          <label class="form-field">
+          <label>
+            Expense Name
+            <input id="expense-name" type="text" placeholder="Rent, groceries, internet">
+          </label>
+          <label>
             Category
-            <select class="select" id="expense-category">
+            <select id="expense-category">
               <option value="Home & Food">Home & Food</option>
               <option value="Family">Family</option>
               <option value="Personal">Personal</option>
+              <option value="Transport">Transport</option>
+              <option value="Health">Health</option>
               <option value="Other">Other</option>
-              <option value="Goals">Goals</option>
             </select>
           </label>
-
-          <label class="form-field">
-            Expense Type
-            <select class="select" id="expense-type">
-              <option value="Fixed">Fixed</option>
-              <option value="Variable">Variable</option>
-              <option value="Goal Allocation">Goal Allocation</option>
-            </select>
-          </label>
-
-          <label class="form-field" id="expense-goal-wrap" style="display: none;">
-            Select Goal
-            <select class="select" id="expense-goal-id">
-              <option value="">Select a goal</option>
-            </select>
-          </label>
-
-          <label class="form-field" id="expense-recurrence-wrap">
-            Recurrence
-            <select class="select" id="expense-recurrence">
-              <option value="None">One Time</option>
-              <option value="Every 2 Weeks">Every 2 Weeks</option>
-            </select>
-          </label>
-
-          <label class="form-field">
-            Due Date
-            <input class="input" id="expense-due-date" type="date">
-          </label>
-
-          <p class="subtle" id="expense-due-help">Required for fixed expenses. You can also mark them as recurring every 2 weeks.</p>
-
-          <label class="form-field">
+          <label>
             Amount
-            <input class="input" id="expense-amount" type="number" min="0" step="0.01" placeholder="0.00">
+            <input id="expense-amount" type="number" min="0" step="0.01" placeholder="0.00">
           </label>
-
           <button class="button" type="submit">Save Expense</button>
           <div id="expense-message" class="message"></div>
         </form>
@@ -131,23 +491,32 @@
       <div class="stack">
         <article class="card">
           <div class="inline-head">
-            <h3 class="section-title" style="margin: 0;">Expense List</h3>
-            <span class="badge" id="expense-count">0 entries</span>
+            <h3 class="section-title" style="margin: 0;">Expenses By Person</h3>
+            <span class="badge">Totals</span>
           </div>
-
-          <div id="expense-list" class="list">
-            <div class="empty-state">No expenses added yet. Start tracking fixed, variable, and goal allocation entries.</div>
+          <div id="expense-split-list" class="list">
+            <div class="empty-state">No expenses have been recorded yet.</div>
           </div>
         </article>
 
         <article class="card">
           <h3 class="section-title">Category Breakdown</h3>
-
+          <p class="section-copy" style="margin-bottom: 18px;">This chart shows all expenses combined by category, even though each one is assigned to a specific person.</p>
           <div class="chart-wrap">
             <canvas id="expense-chart"></canvas>
-            <div id="expense-chart-empty" class="chart-empty">Add paid or allocated expenses to generate the chart.</div>
+            <div id="expense-chart-empty" class="chart-empty">Add expenses to generate the category chart.</div>
           </div>
         </article>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top: 18px;">
+      <div class="inline-head">
+        <h3 class="section-title" style="margin: 0;">Expense History</h3>
+        <span class="badge">Entries</span>
+      </div>
+      <div id="expense-list" class="list">
+        <div class="empty-state">No expenses added yet. Add the first one and assign who is covering it.</div>
       </div>
     </section>
   </div>
