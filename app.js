@@ -1,5 +1,6 @@
 const STORAGE_KEY = "financeTrackerData";
 const SHARED_PERSON_ID = "shared";
+const EXPENSE_DUE_SOON_DAYS = 7;
 const DEFAULT_PEOPLE = [
   { id: "person-1", name: "You" },
   { id: "person-2", name: "Partner" }
@@ -68,10 +69,31 @@ function formatCurrency(value) {
   }).format(Number(value) || 0);
 }
 
-function formatDate(value) {
-  const parsed = new Date(value);
+function parseDateValue(value) {
+  const raw = String(value || "").trim();
 
-  if (!value || Number.isNaN(parsed.getTime())) {
+  if (!raw) {
+    return null;
+  }
+
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (match) {
+    const [, year, month, day] = match;
+    const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const parsed = new Date(raw);
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDate(value) {
+  const parsed = parseDateValue(value);
+
+  if (!parsed) {
     return "No date";
   }
 
@@ -83,9 +105,9 @@ function formatDate(value) {
 }
 
 function getDaysUntil(value) {
-  const parsed = new Date(value);
+  const parsed = parseDateValue(value);
 
-  if (!value || Number.isNaN(parsed.getTime())) {
+  if (!parsed) {
     return null;
   }
 
@@ -94,6 +116,11 @@ function getDaysUntil(value) {
   const target = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 
   return Math.ceil((target - today) / 86400000);
+}
+
+function getDateSortValue(value, fallback = Number.POSITIVE_INFINITY) {
+  const parsed = parseDateValue(value);
+  return parsed ? parsed.getTime() : fallback;
 }
 
 function normalizePeople(rawPeople) {
@@ -122,7 +149,7 @@ function normalizeGoals(rawGoals) {
     id: goal.id || createId("goal"),
     name: String(goal.name || "").trim(),
     amount: Number(goal.amount) || 0,
-    dueDate: goal.dueDate || "",
+    dueDate: String(goal.dueDate || "").trim(),
     createdAt: goal.createdAt || new Date().toISOString()
   })).filter((goal) => goal.name && goal.amount > 0);
 }
@@ -151,6 +178,20 @@ function normalizeExpenseKind(value) {
   return "variable";
 }
 
+function normalizePaymentStatus(value, fallback = "paid") {
+  const raw = String(value || "").trim().toLowerCase();
+
+  if (raw === "paid") {
+    return "paid";
+  }
+
+  if (raw === "pending" || raw === "listed") {
+    return "pending";
+  }
+
+  return fallback;
+}
+
 function resolveGoalReference(expense, goals) {
   const goalId = String(expense.goalId || "").trim();
   const goalName = String(expense.goalName || "").trim();
@@ -174,8 +215,9 @@ function resolveGoalReference(expense, goals) {
 
 function normalizeExpenses(rawExpenses, validIds, goals) {
   return (Array.isArray(rawExpenses) ? rawExpenses : []).map((expense) => {
+    const legacyGoalAllocation = expense.type === "Goal Allocation";
     const expenseKind = normalizeExpenseKind(
-      expense.expenseKind || expense.expenseType || expense.type
+      expense.expenseKind || expense.expenseType || (legacyGoalAllocation ? "goal-allocation" : expense.type)
     );
     const goalRef = resolveGoalReference(expense, goals);
     const goalName = expenseKind === "goal-allocation"
@@ -183,6 +225,12 @@ function normalizeExpenses(rawExpenses, validIds, goals) {
       : "";
     const name = String(expense.name || "").trim()
       || (expenseKind === "goal-allocation" && goalName ? `Allocation to ${goalName}` : "");
+    const paymentStatus = expenseKind === "goal-allocation"
+      ? "paid"
+      : normalizePaymentStatus(expense.paymentStatus, "paid");
+    const paidAt = paymentStatus === "paid"
+      ? (expense.paidAt || expense.createdAt || new Date().toISOString())
+      : "";
     const dueDate = expenseKind === "goal-allocation"
       ? ""
       : String(expense.dueDate || "").trim();
@@ -197,6 +245,8 @@ function normalizeExpenses(rawExpenses, validIds, goals) {
       amount: Number(expense.amount) || 0,
       createdAt: expense.createdAt || new Date().toISOString(),
       expenseKind,
+      paymentStatus,
+      paidAt,
       dueDate,
       goalId: expenseKind === "goal-allocation" ? goalRef.goalId : "",
       goalName
@@ -214,6 +264,64 @@ function isFixedExpense(expense) {
 
 function isVariableExpense(expense) {
   return expense.expenseKind === "variable";
+}
+
+function isPaidExpense(expense) {
+  return isGoalAllocation(expense) || expense.paymentStatus === "paid";
+}
+
+function isPendingExpense(expense) {
+  return !isGoalAllocation(expense) && expense.paymentStatus !== "paid";
+}
+
+function isCountedExpense(expense) {
+  return isPaidExpense(expense);
+}
+
+function getExpenseStatus(expense) {
+  if (isGoalAllocation(expense)) {
+    return "allocated";
+  }
+
+  if (isPaidExpense(expense)) {
+    return "paid";
+  }
+
+  const daysUntil = getDaysUntil(expense.dueDate);
+
+  if (daysUntil === null) {
+    return "listed";
+  }
+
+  if (daysUntil < 0) {
+    return "overdue";
+  }
+
+  if (daysUntil <= EXPENSE_DUE_SOON_DAYS) {
+    return "due-soon";
+  }
+
+  return "listed";
+}
+
+function getExpenseStatusLabel(status) {
+  const labels = {
+    listed: "Listed",
+    "due-soon": "Due Soon",
+    overdue: "Overdue",
+    paid: "Paid",
+    allocated: "Allocated"
+  };
+
+  return labels[status] || "Listed";
+}
+
+function getExpenseKindLabel(expense) {
+  if (isGoalAllocation(expense)) {
+    return "Goal Allocation";
+  }
+
+  return isFixedExpense(expense) ? "Fixed" : "Variable";
 }
 
 function getData() {
@@ -265,11 +373,17 @@ function getGoalName(data, goalId, fallbackName) {
 
 function getPersonStats(data, personId) {
   const incomes = data.incomes.filter((income) => income.personId === personId);
-  const expenses = data.expenses.filter((expense) => expense.personId === personId);
+  const countedExpenses = data.expenses.filter((expense) => {
+    return expense.personId === personId && isCountedExpense(expense);
+  });
+  const pendingExpenses = data.expenses.filter((expense) => {
+    return expense.personId === personId && isPendingExpense(expense);
+  });
 
   const incomeTotal = incomes.reduce((sum, income) => sum + income.amount, 0);
-  const expenseTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const goalAllocated = expenses.reduce((sum, expense) => {
+  const expenseTotal = countedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const pendingAmount = pendingExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const goalAllocated = countedExpenses.reduce((sum, expense) => {
     return sum + (isGoalAllocation(expense) ? expense.amount : 0);
   }, 0);
 
@@ -278,10 +392,11 @@ function getPersonStats(data, personId) {
     name: getPersonName(data, personId),
     income: incomeTotal,
     expenses: expenseTotal,
+    pendingAmount,
     available: incomeTotal - expenseTotal,
     goalAllocated,
     incomeCount: incomes.length,
-    expenseCount: expenses.length
+    expenseCount: countedExpenses.length
   };
 }
 
@@ -301,10 +416,11 @@ function getGoalAllocationMap(data) {
 
 function calculateTotals(data) {
   const householdIncome = data.incomes.reduce((sum, income) => sum + income.amount, 0);
-  const householdExpenses = data.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const countedExpenses = data.expenses.filter(isCountedExpense);
+  const householdExpenses = countedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const householdAvailable = householdIncome - householdExpenses;
   const totalGoalTarget = data.goals.reduce((sum, goal) => sum + goal.amount, 0);
-  const totalGoalAllocated = data.expenses.reduce((sum, expense) => {
+  const totalGoalAllocated = countedExpenses.reduce((sum, expense) => {
     return sum + (isGoalAllocation(expense) ? expense.amount : 0);
   }, 0);
   const personStats = data.people.map((person) => getPersonStats(data, person.id));
@@ -339,6 +455,48 @@ function setMessage(id, text, type) {
 function sortByNewest(items) {
   return [...items].sort((left, right) => {
     return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  });
+}
+
+function sortExpensesForDisplay(items) {
+  const getRank = (expense) => {
+    const status = getExpenseStatus(expense);
+
+    if (status === "overdue") {
+      return 0;
+    }
+
+    if (status === "due-soon") {
+      return 1;
+    }
+
+    if (status === "listed") {
+      return 2;
+    }
+
+    if (status === "paid") {
+      return 3;
+    }
+
+    return 4;
+  };
+
+  return [...items].sort((left, right) => {
+    const rankDiff = getRank(left) - getRank(right);
+
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+
+    if (isPendingExpense(left) && isPendingExpense(right)) {
+      const dueDiff = getDateSortValue(left.dueDate) - getDateSortValue(right.dueDate);
+
+      if (dueDiff !== 0) {
+        return dueDiff;
+      }
+    }
+
+    return new Date(right.paidAt || right.createdAt).getTime() - new Date(left.paidAt || left.createdAt).getTime();
   });
 }
 
@@ -426,6 +584,7 @@ function updateExpenseFormState() {
 
   if (goalSelect) {
     goalSelect.required = isAllocation;
+
     if (!isAllocation) {
       goalSelect.value = "";
     }
@@ -437,6 +596,7 @@ function updateExpenseFormState() {
       categoryInput.disabled = true;
     } else {
       categoryInput.disabled = false;
+
       if (categoryInput.value === "Goals") {
         categoryInput.value = "Home & Food";
       }
@@ -454,13 +614,17 @@ function updateExpenseFormState() {
 
   if (note) {
     if (isAllocation) {
-      note.textContent = "This entry will count as money allocated to the selected goal and will reduce available funds immediately.";
+      note.textContent = "Goal allocations still deduct immediately because you are actively moving that money into a goal.";
     } else if (isFixed) {
-      note.textContent = "Fixed expenses require a due date so you can track when the money is expected to go out.";
+      note.textContent = "Fixed expenses are listed first and only reduce the available balance after you manually mark them paid.";
     } else {
-      note.textContent = "Variable expenses can also include a due date if you want to track when the money goes out.";
+      note.textContent = "Variable expenses can stay listed, due soon, or overdue until you manually mark them paid.";
     }
   }
+}
+
+function buildExpenseStatusPill(status) {
+  return `<span class="status-pill status-${status}">${escapeHtml(getExpenseStatusLabel(status))}</span>`;
 }
 
 function buildBalanceCards(totals, showShared) {
@@ -470,20 +634,22 @@ function buildBalanceCards(totals, showShared) {
       <strong>${formatCurrency(stat.available)}</strong>
       <div class="person-meta">
         <span>Income: ${formatCurrency(stat.income)}</span>
-        <span>Expenses: ${formatCurrency(stat.expenses)}</span>
+        <span>Paid or allocated: ${formatCurrency(stat.expenses)}</span>
+        ${stat.pendingAmount > 0 ? `<span>Pending bills: ${formatCurrency(stat.pendingAmount)}</span>` : ""}
         ${stat.goalAllocated > 0 ? `<span>Goals allocated: ${formatCurrency(stat.goalAllocated)}</span>` : ""}
       </div>
     </article>
   `);
 
-  if (showShared && (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0)) {
+  if (showShared && (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0 || totals.sharedStats.pendingAmount > 0)) {
     cards.push(`
       <article class="person-card shared-card">
         <span class="person-kicker">Shared</span>
         <strong>${formatCurrency(totals.sharedStats.available)}</strong>
         <div class="person-meta">
           <span>Income: ${formatCurrency(totals.sharedStats.income)}</span>
-          <span>Expenses: ${formatCurrency(totals.sharedStats.expenses)}</span>
+          <span>Paid or allocated: ${formatCurrency(totals.sharedStats.expenses)}</span>
+          ${totals.sharedStats.pendingAmount > 0 ? `<span>Pending bills: ${formatCurrency(totals.sharedStats.pendingAmount)}</span>` : ""}
           ${totals.sharedStats.goalAllocated > 0 ? `<span>Goals allocated: ${formatCurrency(totals.sharedStats.goalAllocated)}</span>` : ""}
         </div>
       </article>
@@ -504,7 +670,7 @@ function buildSummaryList(data, totals, kind) {
   const countKey = kind === "income" ? "incomeCount" : "expenseCount";
   const emptyCopy = kind === "income"
     ? "No income has been recorded yet."
-    : "No expenses have been recorded yet.";
+    : "No paid expenses have been recorded yet.";
 
   const nonZero = stats.filter((stat) => stat[countKey] > 0);
 
@@ -523,29 +689,40 @@ function buildSummaryList(data, totals, kind) {
   `).join("");
 }
 
+function buildIncomeMeta(item, data) {
+  return [
+    `<span>${escapeHtml(getPersonName(data, item.personId))}</span>`,
+    `<span>Received ${escapeHtml(formatDate(item.createdAt))}</span>`
+  ].join("");
+}
+
 function buildExpenseMeta(item, data) {
   if (isGoalAllocation(item)) {
     return [
-      escapeHtml(getPersonName(data, item.personId)),
-      "Goal Allocation",
-      escapeHtml(getGoalName(data, item.goalId, item.goalName)),
-      formatDate(item.createdAt)
-    ].map((value) => `<span>${value}</span>`).join("");
+      `<span>${escapeHtml(getPersonName(data, item.personId))}</span>`,
+      "<span>Goal Allocation</span>",
+      `<span>${escapeHtml(getGoalName(data, item.goalId, item.goalName))}</span>`,
+      `<span>${escapeHtml(formatDate(item.createdAt))}</span>`,
+      buildExpenseStatusPill("allocated")
+    ].join("");
   }
 
-  const kindLabel = isFixedExpense(item) ? "Fixed" : "Variable";
-  const dateLabel = item.dueDate
-    ? `Due ${formatDate(item.dueDate)}`
-    : isFixedExpense(item)
-      ? "No due date"
-      : `Logged ${formatDate(item.createdAt)}`;
+  const meta = [
+    `<span>${escapeHtml(getPersonName(data, item.personId))}</span>`,
+    `<span>${escapeHtml(getExpenseKindLabel(item))}</span>`,
+    `<span>${escapeHtml(item.category)}</span>`,
+    item.dueDate
+      ? `<span>Due ${escapeHtml(formatDate(item.dueDate))}</span>`
+      : "<span>No due date</span>"
+  ];
 
-  return [
-    escapeHtml(getPersonName(data, item.personId)),
-    kindLabel,
-    escapeHtml(item.category),
-    dateLabel
-  ].map((value) => `<span>${value}</span>`).join("");
+  if (isPaidExpense(item)) {
+    meta.push(`<span>Paid ${escapeHtml(formatDate(item.paidAt || item.createdAt))}</span>`);
+  }
+
+  meta.push(buildExpenseStatusPill(getExpenseStatus(item)));
+
+  return meta.join("");
 }
 
 function buildActivityList(items, data, kind, emptyCopy) {
@@ -558,9 +735,7 @@ function buildActivityList(items, data, kind, emptyCopy) {
       <div>
         <strong>${escapeHtml(item.name)}</strong>
         <div class="item-meta">
-          ${kind === "expense"
-            ? buildExpenseMeta(item, data)
-            : `<span>${escapeHtml(getPersonName(data, item.personId))}</span><span>${formatDate(item.createdAt)}</span>`}
+          ${kind === "expense" ? buildExpenseMeta(item, data) : buildIncomeMeta(item, data)}
         </div>
       </div>
       <strong>${formatCurrency(item.amount)}</strong>
@@ -568,31 +743,78 @@ function buildActivityList(items, data, kind, emptyCopy) {
   `).join("");
 }
 
-function buildManageList(items, data, kind, emptyCopy) {
+function buildIncomeManageList(items, data, emptyCopy) {
   if (!items.length) {
     return `<div class="empty-state">${emptyCopy}</div>`;
   }
-
-  const deleteHandler = kind === "income" ? "deleteIncome" : "deleteExpense";
 
   return items.map((item) => `
     <div class="list-item">
       <div>
         <strong>${escapeHtml(item.name)}</strong>
-        <div class="item-meta">
-          ${kind === "expense"
-            ? buildExpenseMeta(item, data)
-            : `<span>${escapeHtml(getPersonName(data, item.personId))}</span><span>${formatDate(item.createdAt)}</span>`}
-        </div>
+        <div class="item-meta">${buildIncomeMeta(item, data)}</div>
       </div>
       <div style="text-align: right;">
         <strong>${formatCurrency(item.amount)}</strong>
         <div style="margin-top: 10px;">
-          <button type="button" class="button button-danger" onclick="${deleteHandler}('${item.id}')">Delete</button>
+          <button type="button" class="button button-danger" onclick="deleteIncome('${item.id}')">Delete</button>
         </div>
       </div>
     </div>
   `).join("");
+}
+
+function buildAssigneeOptions(data, selectedPersonId) {
+  const options = [];
+
+  data.people.forEach((person) => {
+    const selected = person.id === selectedPersonId ? " selected" : "";
+    options.push(`<option value="${escapeHtml(person.id)}"${selected}>${escapeHtml(person.name)}</option>`);
+  });
+
+  const sharedSelected = selectedPersonId === SHARED_PERSON_ID ? " selected" : "";
+  options.push(`<option value="${SHARED_PERSON_ID}"${sharedSelected}>Shared expense</option>`);
+
+  return options.join("");
+}
+
+function buildExpenseManageList(items, data, emptyCopy) {
+  if (!items.length) {
+    return `<div class="empty-state">${emptyCopy}</div>`;
+  }
+
+  return items.map((item) => {
+    const actions = [];
+
+    if (!isGoalAllocation(item)) {
+      if (isPendingExpense(item)) {
+        actions.push(`<button type="button" class="button button-success" onclick="markExpensePaid('${item.id}')">Mark Paid</button>`);
+      } else {
+        actions.push(`<button type="button" class="button button-secondary" onclick="markExpenseUnpaid('${item.id}')">Mark Unpaid</button>`);
+      }
+    }
+
+    actions.push(`<button type="button" class="button button-secondary" onclick="updateExpenseAssignee('${item.id}')">Save Assignee</button>`);
+    actions.push(`<button type="button" class="button button-danger" onclick="deleteExpense('${item.id}')">Delete</button>`);
+
+    return `
+      <div class="list-item">
+        <div>
+          <strong>${escapeHtml(item.name)}</strong>
+          <div class="item-meta">${buildExpenseMeta(item, data)}</div>
+        </div>
+        <div class="action-stack">
+          <strong>${formatCurrency(item.amount)}</strong>
+          <select class="inline-select" id="expense-assignee-${item.id}">
+            ${buildAssigneeOptions(data, item.personId)}
+          </select>
+          <div class="action-row">
+            ${actions.join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function renderLegacyNote(id, totals) {
@@ -602,7 +824,7 @@ function renderLegacyNote(id, totals) {
     return;
   }
 
-  if (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0) {
+  if (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0 || totals.sharedStats.pendingAmount > 0) {
     element.style.display = "block";
     element.textContent = "Existing entries created before the split view stay under Shared so they do not get assigned to the wrong person.";
   } else {
@@ -613,7 +835,7 @@ function renderLegacyNote(id, totals) {
 
 function renderExpenseChart(expenses) {
   const canvas = byId("expense-chart");
-  const emptyState = byId("expense-chart-empty");
+  const emptyState = byId("expense-chart-empty") || byId("chart-empty");
 
   if (!canvas || !emptyState) {
     return;
@@ -694,7 +916,8 @@ function buildSavingsList(totals) {
           <strong>${escapeHtml(stat.name)}</strong>
           <div class="item-meta">
             <span>Income ${formatCurrency(stat.income)}</span>
-            <span>Expenses ${formatCurrency(stat.expenses)}</span>
+            <span>Paid or allocated ${formatCurrency(stat.expenses)}</span>
+            ${stat.pendingAmount > 0 ? `<span>Pending bills ${formatCurrency(stat.pendingAmount)}</span>` : ""}
             ${stat.goalAllocated > 0 ? `<span>Goal allocations ${formatCurrency(stat.goalAllocated)}</span>` : ""}
           </div>
         </div>
@@ -708,7 +931,7 @@ function buildSavingsList(totals) {
     `;
   });
 
-  if (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0) {
+  if (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0 || totals.sharedStats.pendingAmount > 0) {
     rows.push(`
       <div class="list-item">
         <div>
@@ -741,6 +964,7 @@ function buildGoalCards(data) {
     const daysLeft = goal.dueDate ? getDaysUntil(goal.dueDate) : null;
 
     let dueCopy = "No due date";
+
     if (daysLeft !== null) {
       if (daysLeft < 0) {
         dueCopy = `${Math.abs(daysLeft)} days overdue`;
@@ -803,16 +1027,16 @@ function renderDashboard() {
 
   const summary = !data.incomes.length && !data.expenses.length
     ? "Add the first income or expense and the split view will light up for both of you."
-    : `Household available balance is ${formatCurrency(totals.householdAvailable)} after everyone's tracked activity.`;
+    : `Household available balance is ${formatCurrency(totals.householdAvailable)} after received income, paid bills, and goal allocations.`;
 
   setText("summary-text", summary);
   setHTML("person-stats", buildBalanceCards(totals, true));
   setHTML("income-split-list", buildSummaryList(data, totals, "income"));
   setHTML("expense-split-list", buildActivityList(
-    sortByNewest(data.expenses).slice(0, 6),
+    sortByNewest(data.expenses.filter(isCountedExpense)).slice(0, 6),
     data,
     "expense",
-    "No expenses have been recorded yet."
+    "No paid expenses have been recorded yet."
   ));
   renderLegacyNote("shared-data-note", totals);
 }
@@ -841,10 +1065,9 @@ function renderIncomePage() {
   populatePersonSelect("income-person", data, "Select who received it");
   setHTML("income-balance-grid", buildBalanceCards(totals, true));
   setHTML("income-split-list", buildSummaryList(data, totals, "income"));
-  setHTML("income-list", buildManageList(
+  setHTML("income-list", buildIncomeManageList(
     sortByNewest(data.incomes),
     data,
-    "income",
     "No income added yet. Add the first income entry to begin the shared tracking."
   ));
   renderLegacyNote("income-legacy-note", totals);
@@ -857,37 +1080,46 @@ function renderExpensesPage() {
 
   const data = getData();
   const totals = calculateTotals(data);
-
-  const fixedTotal = data.expenses.reduce((sum, expense) => {
-    return sum + (isFixedExpense(expense) ? expense.amount : 0);
-  }, 0);
-
-  const variableTotal = data.expenses.reduce((sum, expense) => {
-    return sum + (isVariableExpense(expense) ? expense.amount : 0);
-  }, 0);
+  const pendingExpenses = data.expenses.filter(isPendingExpense);
+  const dueSoonExpenses = pendingExpenses.filter((expense) => getExpenseStatus(expense) === "due-soon");
+  const overdueExpenses = pendingExpenses.filter((expense) => getExpenseStatus(expense) === "overdue");
+  const pendingTotal = pendingExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const dueSoonTotal = dueSoonExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const overdueTotal = overdueExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const chartExpenses = data.expenses.filter(isCountedExpense);
+  const chartEmpty = byId("expense-chart-empty") || byId("chart-empty");
 
   setText("expense-household-total", formatCurrency(totals.householdExpenses));
   setText("expense-household-total-hero", formatCurrency(totals.householdExpenses));
   setText("expense-household-available", formatCurrency(totals.householdAvailable));
-  setText("expense-fixed-total", formatCurrency(fixedTotal));
-  setText("expense-variable-total", formatCurrency(variableTotal));
+  setText("expense-pending-total", formatCurrency(pendingTotal));
+  setText("expense-due-soon-total", formatCurrency(dueSoonTotal));
+  setText("expense-overdue-total", formatCurrency(overdueTotal));
   setText("expense-goal-allocated", formatCurrency(totals.totalGoalAllocated));
   setText("expense-count", `${data.expenses.length} ${data.expenses.length === 1 ? "entry" : "entries"}`);
 
-  populatePersonSelect("expense-person", data, "Select who is paying", true);
+  populatePersonSelect("expense-person", data, "Select who is assigned", true);
   populateGoalSelect(data);
   updateExpenseFormState();
 
   setHTML("expense-balance-grid", buildBalanceCards(totals, true));
   setHTML("expense-split-list", buildSummaryList(data, totals, "expense"));
-  setHTML("expense-list", buildManageList(
-    sortByNewest(data.expenses),
+  setHTML("expense-list", buildExpenseManageList(
+    sortExpensesForDisplay(data.expenses),
     data,
-    "expense",
-    "No expenses added yet. Add the first one and assign who is covering it."
+    "No expenses added yet. Add the first one and it will stay listed until you mark it paid."
   ));
+
+  if (chartEmpty) {
+    chartEmpty.textContent = chartExpenses.length
+      ? chartEmpty.textContent
+      : (pendingExpenses.length
+        ? "Your bills are listed, but none have been marked paid yet. Mark one paid or add a goal allocation to build the chart."
+        : "Add expenses or goal allocations to generate the category chart.");
+  }
+
   renderLegacyNote("expense-legacy-note", totals);
-  renderExpenseChart(data.expenses);
+  renderExpenseChart(chartExpenses);
 }
 
 function renderSavingsPage() {
@@ -910,11 +1142,12 @@ function renderSavingsPage() {
   renderLegacyNote("savings-legacy-note", totals);
 
   const summary = byId("savings-summary");
+
   if (summary) {
     if (!data.incomes.length && !data.expenses.length) {
       summary.textContent = "Add income and expenses first, and this page will show how much is still being preserved.";
     } else if (totals.householdAvailable >= 0) {
-      summary.textContent = `The household is currently holding on to ${formatCurrency(totals.householdAvailable)} after all tracked expenses and goal allocations.`;
+      summary.textContent = `The household is currently holding on to ${formatCurrency(totals.householdAvailable)} after paid expenses and goal allocations.`;
     } else {
       summary.textContent = `The household is currently overspent by ${formatCurrency(Math.abs(totals.householdAvailable))}.`;
     }
@@ -941,6 +1174,7 @@ function renderGoalsPage() {
   renderLegacyNote("goals-legacy-note", totals);
 
   const summary = byId("goals-summary");
+
   if (summary) {
     if (!data.goals.length) {
       summary.textContent = "Create a goal and we will compare it against the money you have actively allocated to your goals.";
@@ -1025,12 +1259,12 @@ function addExpense(event) {
   const amount = Number(byId("expense-amount")?.value);
   const data = getData();
 
-  const validPayer = personId === SHARED_PERSON_ID || data.people.some((person) => person.id === personId);
+  const validAssignee = personId === SHARED_PERSON_ID || data.people.some((person) => person.id === personId);
   const isAllocation = expenseKind === "goal-allocation";
   const isFixed = expenseKind === "fixed";
 
-  if (!validPayer || !Number.isFinite(amount) || amount <= 0) {
-    setMessage("expense-message", "Choose who is paying and enter an amount above zero.", "error");
+  if (!validAssignee || !Number.isFinite(amount) || amount <= 0) {
+    setMessage("expense-message", "Choose who is assigned and enter an amount above zero.", "error");
     return;
   }
 
@@ -1039,6 +1273,8 @@ function addExpense(event) {
   let linkedGoalId = "";
   let linkedGoalName = "";
   let finalDueDate = dueDate;
+  let paymentStatus = "pending";
+  let paidAt = "";
 
   if (isAllocation) {
     const goal = data.goals.find((entry) => entry.id === goalId);
@@ -1052,6 +1288,8 @@ function addExpense(event) {
     linkedGoalName = goal.name;
     finalCategory = "Goals";
     finalDueDate = "";
+    paymentStatus = "paid";
+    paidAt = new Date().toISOString();
     name = name || `Allocation to ${goal.name}`;
   }
 
@@ -1073,6 +1311,8 @@ function addExpense(event) {
     amount,
     createdAt: new Date().toISOString(),
     expenseKind,
+    paymentStatus,
+    paidAt,
     dueDate: finalDueDate,
     goalId: linkedGoalId,
     goalName: linkedGoalName
@@ -1080,12 +1320,65 @@ function addExpense(event) {
 
   saveData(data);
   byId("expense-form")?.reset();
-  populatePersonSelect("expense-person", data, "Select who is paying", true);
+  populatePersonSelect("expense-person", data, "Select who is assigned", true);
   populateGoalSelect(data);
   updateExpenseFormState();
-  setMessage("expense-message", isAllocation
-    ? "Goal allocation saved successfully."
-    : "Expense saved successfully.", "success");
+  setMessage(
+    "expense-message",
+    isAllocation
+      ? "Goal allocation saved successfully."
+      : "Expense listed successfully. It will only reduce balances after you mark it paid.",
+    "success"
+  );
+  renderAll();
+}
+
+function updateExpenseAssignee(expenseId) {
+  const data = getData();
+  const expense = data.expenses.find((entry) => entry.id === expenseId);
+  const select = byId(`expense-assignee-${expenseId}`);
+
+  if (!expense || !select) {
+    return;
+  }
+
+  const nextPersonId = String(select.value || "").trim();
+  const validAssignee = nextPersonId === SHARED_PERSON_ID || data.people.some((person) => person.id === nextPersonId);
+
+  if (!validAssignee) {
+    return;
+  }
+
+  expense.personId = nextPersonId;
+  saveData(data);
+  renderAll();
+}
+
+function markExpensePaid(expenseId) {
+  const data = getData();
+  const expense = data.expenses.find((entry) => entry.id === expenseId);
+
+  if (!expense || isGoalAllocation(expense) || isPaidExpense(expense)) {
+    return;
+  }
+
+  expense.paymentStatus = "paid";
+  expense.paidAt = new Date().toISOString();
+  saveData(data);
+  renderAll();
+}
+
+function markExpenseUnpaid(expenseId) {
+  const data = getData();
+  const expense = data.expenses.find((entry) => entry.id === expenseId);
+
+  if (!expense || isGoalAllocation(expense) || isPendingExpense(expense)) {
+    return;
+  }
+
+  expense.paymentStatus = "pending";
+  expense.paidAt = "";
+  saveData(data);
   renderAll();
 }
 
@@ -1116,7 +1409,7 @@ function deleteExpense(expenseId) {
     return;
   }
 
-  const confirmed = window.confirm(`Delete expense "${expense.name}"?`);
+  const confirmed = window.confirm(`Delete entry "${expense.name}"?`);
 
   if (!confirmed) {
     return;
@@ -1226,3 +1519,6 @@ window.addEventListener("storage", renderAll);
 window.deleteIncome = deleteIncome;
 window.deleteExpense = deleteExpense;
 window.deleteGoal = deleteGoal;
+window.markExpensePaid = markExpensePaid;
+window.markExpenseUnpaid = markExpenseUnpaid;
+window.updateExpenseAssignee = updateExpenseAssignee;
