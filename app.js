@@ -1,6 +1,7 @@
 const STORAGE_KEY = "financeTrackerData";
 const SHARED_PERSON_ID = "shared";
 const EXPENSE_DUE_SOON_DAYS = 7;
+const INCOME_DUE_SOON_DAYS = 7;
 const DEFAULT_PEOPLE = [
   { id: "person-1", name: "You" },
   { id: "person-2", name: "Partner" }
@@ -14,6 +15,7 @@ function byId(id) {
 
 function setText(id, value) {
   const element = byId(id);
+
   if (element) {
     element.textContent = value;
   }
@@ -21,6 +23,7 @@ function setText(id, value) {
 
 function setHTML(id, value) {
   const element = byId(id);
+
   if (element) {
     element.innerHTML = value;
   }
@@ -28,6 +31,7 @@ function setHTML(id, value) {
 
 function setWidth(id, value) {
   const element = byId(id);
+
   if (element) {
     element.style.width = value;
   }
@@ -104,6 +108,31 @@ function formatDate(value) {
   });
 }
 
+function formatDateInput(value) {
+  const parsed = parseDateValue(value);
+
+  if (!parsed) {
+    return "";
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function addDaysToDateInput(value, days) {
+  const parsed = parseDateValue(value);
+
+  if (!parsed) {
+    return "";
+  }
+
+  parsed.setDate(parsed.getDate() + days);
+  return formatDateInput(parsed);
+}
+
 function getDaysUntil(value) {
   const parsed = parseDateValue(value);
 
@@ -154,14 +183,58 @@ function normalizeGoals(rawGoals) {
   })).filter((goal) => goal.name && goal.amount > 0);
 }
 
+function normalizeIncomeFrequency(value) {
+  const raw = String(value || "").trim().toLowerCase();
+
+  if (raw === "bi-weekly" || raw === "biweekly") {
+    return "bi-weekly";
+  }
+
+  return "one-time";
+}
+
+function normalizeIncomeStatus(value, hasExpectedDate) {
+  const raw = String(value || "").trim().toLowerCase();
+
+  if (raw === "pending" || raw === "scheduled" || raw === "listed") {
+    return "pending";
+  }
+
+  if (raw === "received") {
+    return "received";
+  }
+
+  return hasExpectedDate ? "pending" : "received";
+}
+
 function normalizeIncomes(rawIncomes, validIds) {
-  return (Array.isArray(rawIncomes) ? rawIncomes : []).map((income) => ({
-    id: income.id || createId("income"),
-    personId: normalizePersonId(income.personId, validIds),
-    name: String(income.name || "").trim(),
-    amount: Number(income.amount) || 0,
-    createdAt: income.createdAt || new Date().toISOString()
-  })).filter((income) => income.name && income.amount > 0);
+  return (Array.isArray(rawIncomes) ? rawIncomes : []).map((income) => {
+    const id = income.id || createId("income");
+    const expectedDate = String(income.expectedDate || income.depositDate || "").trim();
+    const incomeFrequency = normalizeIncomeFrequency(income.incomeFrequency || income.frequency);
+    const incomeStatus = normalizeIncomeStatus(income.incomeStatus || income.status, Boolean(expectedDate));
+    const createdAt = income.createdAt || income.receivedAt || new Date().toISOString();
+    const receivedAt = incomeStatus === "received"
+      ? (income.receivedAt || income.createdAt || new Date().toISOString())
+      : "";
+
+    return {
+      id,
+      personId: normalizePersonId(income.personId, validIds),
+      name: String(income.name || "").trim(),
+      amount: Number(income.amount) || 0,
+      incomeFrequency,
+      expectedDate,
+      incomeStatus,
+      receivedAt,
+      createdAt,
+      recurrenceGroupId: String(
+        income.recurrenceGroupId
+        || (incomeFrequency === "bi-weekly" ? `series-${id}` : "")
+      ).trim(),
+      generatedFromIncomeId: String(income.generatedFromIncomeId || "").trim()
+    };
+  }).filter((income) => income.name && income.amount > 0);
 }
 
 function normalizeExpenseKind(value) {
@@ -198,6 +271,7 @@ function resolveGoalReference(expense, goals) {
 
   if (goalId) {
     const goalById = goals.find((goal) => goal.id === goalId);
+
     if (goalById) {
       return { goalId: goalById.id, goalName: goalById.name };
     }
@@ -205,6 +279,7 @@ function resolveGoalReference(expense, goals) {
 
   if (goalName) {
     const goalByName = goals.find((goal) => goal.name.toLowerCase() === goalName.toLowerCase());
+
     if (goalByName) {
       return { goalId: goalByName.id, goalName: goalByName.name };
     }
@@ -254,6 +329,14 @@ function normalizeExpenses(rawExpenses, validIds, goals) {
   }).filter((expense) => expense.name && expense.amount > 0);
 }
 
+function isReceivedIncome(income) {
+  return income.incomeStatus === "received";
+}
+
+function isPendingIncome(income) {
+  return income.incomeStatus !== "received";
+}
+
 function isGoalAllocation(expense) {
   return expense.expenseKind === "goal-allocation";
 }
@@ -276,6 +359,28 @@ function isPendingExpense(expense) {
 
 function isCountedExpense(expense) {
   return isPaidExpense(expense);
+}
+
+function getIncomeStatus(income) {
+  if (isReceivedIncome(income)) {
+    return "received";
+  }
+
+  const daysUntil = getDaysUntil(income.expectedDate);
+
+  if (daysUntil === null) {
+    return "scheduled";
+  }
+
+  if (daysUntil < 0) {
+    return "overdue";
+  }
+
+  if (daysUntil <= INCOME_DUE_SOON_DAYS) {
+    return "due-soon";
+  }
+
+  return "scheduled";
 }
 
 function getExpenseStatus(expense) {
@@ -304,6 +409,17 @@ function getExpenseStatus(expense) {
   return "listed";
 }
 
+function getIncomeStatusLabel(status) {
+  const labels = {
+    scheduled: "Scheduled",
+    "due-soon": "Due Soon",
+    overdue: "Overdue",
+    received: "Received"
+  };
+
+  return labels[status] || "Scheduled";
+}
+
 function getExpenseStatusLabel(status) {
   const labels = {
     listed: "Listed",
@@ -314,6 +430,10 @@ function getExpenseStatusLabel(status) {
   };
 
   return labels[status] || "Listed";
+}
+
+function getIncomeFrequencyLabel(income) {
+  return income.incomeFrequency === "bi-weekly" ? "Bi-Weekly" : "One-Time";
 }
 
 function getExpenseKindLabel(expense) {
@@ -372,7 +492,12 @@ function getGoalName(data, goalId, fallbackName) {
 }
 
 function getPersonStats(data, personId) {
-  const incomes = data.incomes.filter((income) => income.personId === personId);
+  const receivedIncomes = data.incomes.filter((income) => {
+    return income.personId === personId && isReceivedIncome(income);
+  });
+  const pendingIncomes = data.incomes.filter((income) => {
+    return income.personId === personId && isPendingIncome(income);
+  });
   const countedExpenses = data.expenses.filter((expense) => {
     return expense.personId === personId && isCountedExpense(expense);
   });
@@ -380,7 +505,8 @@ function getPersonStats(data, personId) {
     return expense.personId === personId && isPendingExpense(expense);
   });
 
-  const incomeTotal = incomes.reduce((sum, income) => sum + income.amount, 0);
+  const incomeTotal = receivedIncomes.reduce((sum, income) => sum + income.amount, 0);
+  const scheduledIncome = pendingIncomes.reduce((sum, income) => sum + income.amount, 0);
   const expenseTotal = countedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const pendingAmount = pendingExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const goalAllocated = countedExpenses.reduce((sum, expense) => {
@@ -391,11 +517,12 @@ function getPersonStats(data, personId) {
     id: personId,
     name: getPersonName(data, personId),
     income: incomeTotal,
+    scheduledIncome,
     expenses: expenseTotal,
     pendingAmount,
     available: incomeTotal - expenseTotal,
     goalAllocated,
-    incomeCount: incomes.length,
+    incomeCount: receivedIncomes.length,
     expenseCount: countedExpenses.length
   };
 }
@@ -415,8 +542,9 @@ function getGoalAllocationMap(data) {
 }
 
 function calculateTotals(data) {
-  const householdIncome = data.incomes.reduce((sum, income) => sum + income.amount, 0);
+  const receivedIncomes = data.incomes.filter(isReceivedIncome);
   const countedExpenses = data.expenses.filter(isCountedExpense);
+  const householdIncome = receivedIncomes.reduce((sum, income) => sum + income.amount, 0);
   const householdExpenses = countedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const householdAvailable = householdIncome - householdExpenses;
   const totalGoalTarget = data.goals.reduce((sum, goal) => sum + goal.amount, 0);
@@ -500,6 +628,44 @@ function sortExpensesForDisplay(items) {
   });
 }
 
+function sortIncomesForDisplay(items) {
+  const getRank = (income) => {
+    const status = getIncomeStatus(income);
+
+    if (status === "overdue") {
+      return 0;
+    }
+
+    if (status === "due-soon") {
+      return 1;
+    }
+
+    if (status === "scheduled") {
+      return 2;
+    }
+
+    return 3;
+  };
+
+  return [...items].sort((left, right) => {
+    const rankDiff = getRank(left) - getRank(right);
+
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+
+    if (isPendingIncome(left) && isPendingIncome(right)) {
+      const expectedDiff = getDateSortValue(left.expectedDate) - getDateSortValue(right.expectedDate);
+
+      if (expectedDiff !== 0) {
+        return expectedDiff;
+      }
+    }
+
+    return new Date(right.receivedAt || right.createdAt).getTime() - new Date(left.receivedAt || left.createdAt).getTime();
+  });
+}
+
 function populatePersonSelect(selectId, data, placeholder, includeShared = false) {
   const select = byId(selectId);
 
@@ -559,6 +725,28 @@ function populateGoalSelect(data) {
 
   if (currentValue && data.goals.some((goal) => goal.id === currentValue)) {
     select.value = currentValue;
+  }
+}
+
+function updateIncomeFormState() {
+  const frequencySelect = byId("income-frequency");
+  const expectedDateInput = byId("income-expected-date");
+  const note = byId("income-schedule-note");
+
+  if (!frequencySelect) {
+    return;
+  }
+
+  const frequency = frequencySelect.value;
+
+  if (expectedDateInput) {
+    expectedDateInput.required = true;
+  }
+
+  if (note) {
+    note.textContent = frequency === "bi-weekly"
+      ? "When you mark a bi-weekly paycheck as received, the next paycheck 14 days later will be scheduled automatically."
+      : "One-time deposits stay scheduled until you manually mark them received.";
   }
 }
 
@@ -623,8 +811,8 @@ function updateExpenseFormState() {
   }
 }
 
-function buildExpenseStatusPill(status) {
-  return `<span class="status-pill status-${status}">${escapeHtml(getExpenseStatusLabel(status))}</span>`;
+function buildStatusPill(status, label) {
+  return `<span class="status-pill status-${escapeHtml(status)}">${escapeHtml(label)}</span>`;
 }
 
 function buildBalanceCards(totals, showShared) {
@@ -633,7 +821,8 @@ function buildBalanceCards(totals, showShared) {
       <span class="person-kicker">${escapeHtml(stat.name)}</span>
       <strong>${formatCurrency(stat.available)}</strong>
       <div class="person-meta">
-        <span>Income: ${formatCurrency(stat.income)}</span>
+        <span>Received income: ${formatCurrency(stat.income)}</span>
+        ${stat.scheduledIncome > 0 ? `<span>Scheduled income: ${formatCurrency(stat.scheduledIncome)}</span>` : ""}
         <span>Paid or allocated: ${formatCurrency(stat.expenses)}</span>
         ${stat.pendingAmount > 0 ? `<span>Pending bills: ${formatCurrency(stat.pendingAmount)}</span>` : ""}
         ${stat.goalAllocated > 0 ? `<span>Goals allocated: ${formatCurrency(stat.goalAllocated)}</span>` : ""}
@@ -641,13 +830,14 @@ function buildBalanceCards(totals, showShared) {
     </article>
   `);
 
-  if (showShared && (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0 || totals.sharedStats.pendingAmount > 0)) {
+  if (showShared && (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0 || totals.sharedStats.pendingAmount > 0 || totals.sharedStats.scheduledIncome > 0)) {
     cards.push(`
       <article class="person-card shared-card">
         <span class="person-kicker">Shared</span>
         <strong>${formatCurrency(totals.sharedStats.available)}</strong>
         <div class="person-meta">
-          <span>Income: ${formatCurrency(totals.sharedStats.income)}</span>
+          <span>Received income: ${formatCurrency(totals.sharedStats.income)}</span>
+          ${totals.sharedStats.scheduledIncome > 0 ? `<span>Scheduled income: ${formatCurrency(totals.sharedStats.scheduledIncome)}</span>` : ""}
           <span>Paid or allocated: ${formatCurrency(totals.sharedStats.expenses)}</span>
           ${totals.sharedStats.pendingAmount > 0 ? `<span>Pending bills: ${formatCurrency(totals.sharedStats.pendingAmount)}</span>` : ""}
           ${totals.sharedStats.goalAllocated > 0 ? `<span>Goals allocated: ${formatCurrency(totals.sharedStats.goalAllocated)}</span>` : ""}
@@ -669,7 +859,7 @@ function buildSummaryList(data, totals, kind) {
   const metricKey = kind === "income" ? "income" : "expenses";
   const countKey = kind === "income" ? "incomeCount" : "expenseCount";
   const emptyCopy = kind === "income"
-    ? "No income has been recorded yet."
+    ? "No received income has been recorded yet."
     : "No paid expenses have been recorded yet.";
 
   const nonZero = stats.filter((stat) => stat[countKey] > 0);
@@ -690,10 +880,23 @@ function buildSummaryList(data, totals, kind) {
 }
 
 function buildIncomeMeta(item, data) {
-  return [
+  const status = getIncomeStatus(item);
+  const parts = [
     `<span>${escapeHtml(getPersonName(data, item.personId))}</span>`,
-    `<span>Received ${escapeHtml(formatDate(item.createdAt))}</span>`
-  ].join("");
+    `<span>${escapeHtml(getIncomeFrequencyLabel(item))}</span>`
+  ];
+
+  if (item.expectedDate) {
+    parts.push(`<span>Expected ${escapeHtml(formatDate(item.expectedDate))}</span>`);
+  }
+
+  if (isReceivedIncome(item)) {
+    parts.push(`<span>Received ${escapeHtml(formatDate(item.receivedAt || item.createdAt))}</span>`);
+  }
+
+  parts.push(buildStatusPill(status, getIncomeStatusLabel(status)));
+
+  return parts.join("");
 }
 
 function buildExpenseMeta(item, data) {
@@ -703,11 +906,12 @@ function buildExpenseMeta(item, data) {
       "<span>Goal Allocation</span>",
       `<span>${escapeHtml(getGoalName(data, item.goalId, item.goalName))}</span>`,
       `<span>${escapeHtml(formatDate(item.createdAt))}</span>`,
-      buildExpenseStatusPill("allocated")
+      buildStatusPill("allocated", getExpenseStatusLabel("allocated"))
     ].join("");
   }
 
-  const meta = [
+  const status = getExpenseStatus(item);
+  const parts = [
     `<span>${escapeHtml(getPersonName(data, item.personId))}</span>`,
     `<span>${escapeHtml(getExpenseKindLabel(item))}</span>`,
     `<span>${escapeHtml(item.category)}</span>`,
@@ -717,12 +921,12 @@ function buildExpenseMeta(item, data) {
   ];
 
   if (isPaidExpense(item)) {
-    meta.push(`<span>Paid ${escapeHtml(formatDate(item.paidAt || item.createdAt))}</span>`);
+    parts.push(`<span>Paid ${escapeHtml(formatDate(item.paidAt || item.createdAt))}</span>`);
   }
 
-  meta.push(buildExpenseStatusPill(getExpenseStatus(item)));
+  parts.push(buildStatusPill(status, getExpenseStatusLabel(status)));
 
-  return meta.join("");
+  return parts.join("");
 }
 
 function buildActivityList(items, data, kind, emptyCopy) {
@@ -754,9 +958,12 @@ function buildIncomeManageList(items, data, emptyCopy) {
         <strong>${escapeHtml(item.name)}</strong>
         <div class="item-meta">${buildIncomeMeta(item, data)}</div>
       </div>
-      <div style="text-align: right;">
+      <div class="action-stack">
         <strong>${formatCurrency(item.amount)}</strong>
-        <div style="margin-top: 10px;">
+        <div class="action-row">
+          ${isPendingIncome(item)
+            ? `<button type="button" class="button button-success" onclick="markIncomeReceived('${item.id}')">Mark Received</button>`
+            : `<button type="button" class="button button-secondary" onclick="markIncomePending('${item.id}')">Mark Unreceived</button>`}
           <button type="button" class="button button-danger" onclick="deleteIncome('${item.id}')">Delete</button>
         </div>
       </div>
@@ -824,7 +1031,7 @@ function renderLegacyNote(id, totals) {
     return;
   }
 
-  if (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0 || totals.sharedStats.pendingAmount > 0) {
+  if (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0 || totals.sharedStats.pendingAmount > 0 || totals.sharedStats.scheduledIncome > 0) {
     element.style.display = "block";
     element.textContent = "Existing entries created before the split view stay under Shared so they do not get assigned to the wrong person.";
   } else {
@@ -915,7 +1122,8 @@ function buildSavingsList(totals) {
         <div>
           <strong>${escapeHtml(stat.name)}</strong>
           <div class="item-meta">
-            <span>Income ${formatCurrency(stat.income)}</span>
+            <span>Received income ${formatCurrency(stat.income)}</span>
+            ${stat.scheduledIncome > 0 ? `<span>Scheduled income ${formatCurrency(stat.scheduledIncome)}</span>` : ""}
             <span>Paid or allocated ${formatCurrency(stat.expenses)}</span>
             ${stat.pendingAmount > 0 ? `<span>Pending bills ${formatCurrency(stat.pendingAmount)}</span>` : ""}
             ${stat.goalAllocated > 0 ? `<span>Goal allocations ${formatCurrency(stat.goalAllocated)}</span>` : ""}
@@ -931,7 +1139,7 @@ function buildSavingsList(totals) {
     `;
   });
 
-  if (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0 || totals.sharedStats.pendingAmount > 0) {
+  if (totals.sharedStats.income > 0 || totals.sharedStats.expenses > 0 || totals.sharedStats.pendingAmount > 0 || totals.sharedStats.scheduledIncome > 0) {
     rows.push(`
       <div class="list-item">
         <div>
@@ -1048,9 +1256,18 @@ function renderIncomePage() {
 
   const data = getData();
   const totals = calculateTotals(data);
+  const scheduledIncomes = data.incomes.filter(isPendingIncome);
+  const dueSoonIncomes = scheduledIncomes.filter((income) => getIncomeStatus(income) === "due-soon");
+  const overdueIncomes = scheduledIncomes.filter((income) => getIncomeStatus(income) === "overdue");
+  const scheduledTotal = scheduledIncomes.reduce((sum, income) => sum + income.amount, 0);
+  const dueSoonTotal = dueSoonIncomes.reduce((sum, income) => sum + income.amount, 0);
+  const overdueTotal = overdueIncomes.reduce((sum, income) => sum + income.amount, 0);
 
   setText("income-household-available", formatCurrency(totals.householdAvailable));
   setText("income-household-total", formatCurrency(totals.householdIncome));
+  setText("income-scheduled-total", formatCurrency(scheduledTotal));
+  setText("income-due-soon-total", formatCurrency(dueSoonTotal));
+  setText("income-overdue-total", formatCurrency(overdueTotal));
   setText("income-people-count", `${data.people.length} people`);
   setText("income-count", `${data.incomes.length} ${data.incomes.length === 1 ? "entry" : "entries"}`);
 
@@ -1062,13 +1279,15 @@ function renderIncomePage() {
     byId("member-name-2").value = data.people[1].name;
   }
 
-  populatePersonSelect("income-person", data, "Select who received it");
+  populatePersonSelect("income-person", data, "Select who receives it");
+  updateIncomeFormState();
+
   setHTML("income-balance-grid", buildBalanceCards(totals, true));
   setHTML("income-split-list", buildSummaryList(data, totals, "income"));
   setHTML("income-list", buildIncomeManageList(
-    sortByNewest(data.incomes),
+    sortIncomesForDisplay(data.incomes),
     data,
-    "No income added yet. Add the first income entry to begin the shared tracking."
+    "No income scheduled yet. Add the first expected deposit to start tracking incoming money."
   ));
   renderLegacyNote("income-legacy-note", totals);
 }
@@ -1110,12 +1329,8 @@ function renderExpensesPage() {
     "No expenses added yet. Add the first one and it will stay listed until you mark it paid."
   ));
 
-  if (chartEmpty) {
-    chartEmpty.textContent = chartExpenses.length
-      ? chartEmpty.textContent
-      : (pendingExpenses.length
-        ? "Your bills are listed, but none have been marked paid yet. Mark one paid or add a goal allocation to build the chart."
-        : "Add expenses or goal allocations to generate the category chart.");
+  if (chartEmpty && !chartExpenses.length && pendingExpenses.length) {
+    chartEmpty.textContent = "Your bills are listed, but none have been marked paid yet. Mark one paid or add a goal allocation to build the chart.";
   }
 
   renderLegacyNote("expense-legacy-note", totals);
@@ -1147,7 +1362,7 @@ function renderSavingsPage() {
     if (!data.incomes.length && !data.expenses.length) {
       summary.textContent = "Add income and expenses first, and this page will show how much is still being preserved.";
     } else if (totals.householdAvailable >= 0) {
-      summary.textContent = `The household is currently holding on to ${formatCurrency(totals.householdAvailable)} after paid expenses and goal allocations.`;
+      summary.textContent = `The household is currently holding on to ${formatCurrency(totals.householdAvailable)} after received income, paid expenses, and goal allocations.`;
     } else {
       summary.textContent = `The household is currently overspent by ${formatCurrency(Math.abs(totals.householdAvailable))}.`;
     }
@@ -1225,25 +1440,113 @@ function addIncome(event) {
   const personId = String(byId("income-person")?.value || "").trim();
   const name = String(byId("income-name")?.value || "").trim();
   const amount = Number(byId("income-amount")?.value);
+  const incomeFrequency = normalizeIncomeFrequency(byId("income-frequency")?.value || "one-time");
+  const expectedDate = String(byId("income-expected-date")?.value || "").trim();
   const data = getData();
 
-  if (!data.people.some((person) => person.id === personId) || !name || !Number.isFinite(amount) || amount <= 0) {
-    setMessage("income-message", "Choose who received the income, add a name, and enter an amount above zero.", "error");
+  if (!data.people.some((person) => person.id === personId) || !name || !Number.isFinite(amount) || amount <= 0 || !expectedDate) {
+    setMessage("income-message", "Choose who receives it, add a name, set a date, and enter an amount above zero.", "error");
+    return;
+  }
+
+  const id = createId("income");
+
+  data.incomes.unshift({
+    id,
+    personId,
+    name,
+    amount,
+    incomeFrequency,
+    expectedDate,
+    incomeStatus: "pending",
+    receivedAt: "",
+    createdAt: new Date().toISOString(),
+    recurrenceGroupId: incomeFrequency === "bi-weekly" ? `series-${id}` : "",
+    generatedFromIncomeId: ""
+  });
+
+  saveData(data);
+  byId("income-form")?.reset();
+  populatePersonSelect("income-person", data, "Select who receives it");
+  updateIncomeFormState();
+  setMessage(
+    "income-message",
+    incomeFrequency === "bi-weekly"
+      ? "Bi-weekly income scheduled. Mark it received when it hits the bank and the next pay date will be queued automatically."
+      : "Income scheduled successfully. Mark it received when it reaches the bank account.",
+    "success"
+  );
+  renderAll();
+}
+
+function ensureNextBiWeeklyIncome(data, income) {
+  if (income.incomeFrequency !== "bi-weekly" || !income.expectedDate) {
+    return;
+  }
+
+  const nextExpectedDate = addDaysToDateInput(income.expectedDate, 14);
+
+  if (!nextExpectedDate) {
+    return;
+  }
+
+  const recurrenceGroupId = income.recurrenceGroupId || `series-${income.id}`;
+  const alreadyExists = data.incomes.some((entry) => {
+    return entry.recurrenceGroupId === recurrenceGroupId && entry.expectedDate === nextExpectedDate;
+  });
+
+  if (alreadyExists) {
     return;
   }
 
   data.incomes.unshift({
     id: createId("income"),
-    personId,
-    name,
-    amount,
-    createdAt: new Date().toISOString()
+    personId: income.personId,
+    name: income.name,
+    amount: income.amount,
+    incomeFrequency: "bi-weekly",
+    expectedDate: nextExpectedDate,
+    incomeStatus: "pending",
+    receivedAt: "",
+    createdAt: new Date().toISOString(),
+    recurrenceGroupId,
+    generatedFromIncomeId: income.id
   });
+}
+
+function markIncomeReceived(incomeId) {
+  const data = getData();
+  const income = data.incomes.find((entry) => entry.id === incomeId);
+
+  if (!income || isReceivedIncome(income)) {
+    return;
+  }
+
+  income.incomeStatus = "received";
+  income.receivedAt = new Date().toISOString();
+  ensureNextBiWeeklyIncome(data, income);
+  saveData(data);
+  renderAll();
+}
+
+function markIncomePending(incomeId) {
+  const data = getData();
+  const income = data.incomes.find((entry) => entry.id === incomeId);
+
+  if (!income || isPendingIncome(income)) {
+    return;
+  }
+
+  income.incomeStatus = "pending";
+  income.receivedAt = "";
+
+  if (income.incomeFrequency === "bi-weekly") {
+    data.incomes = data.incomes.filter((entry) => {
+      return !(entry.generatedFromIncomeId === income.id && isPendingIncome(entry));
+    });
+  }
 
   saveData(data);
-  byId("income-form")?.reset();
-  populatePersonSelect("income-person", data, "Select who received it");
-  setMessage("income-message", "Income saved successfully.", "success");
   renderAll();
 }
 
@@ -1390,7 +1693,7 @@ function deleteIncome(incomeId) {
     return;
   }
 
-  const confirmed = window.confirm(`Delete income "${income.name}"?`);
+  const confirmed = window.confirm(`Delete income entry "${income.name}"?`);
 
   if (!confirmed) {
     return;
@@ -1505,6 +1808,7 @@ function bindEvents() {
   byId("income-form")?.addEventListener("submit", addIncome);
   byId("expense-form")?.addEventListener("submit", addExpense);
   byId("goal-form")?.addEventListener("submit", addGoal);
+  byId("income-frequency")?.addEventListener("change", updateIncomeFormState);
   byId("expense-type")?.addEventListener("change", updateExpenseFormState);
   byId("reset-finance-button")?.addEventListener("click", resetFinanceData);
 }
@@ -1512,6 +1816,8 @@ function bindEvents() {
 document.addEventListener("DOMContentLoaded", () => {
   initStorage();
   bindEvents();
+  updateIncomeFormState();
+  updateExpenseFormState();
   renderAll();
 });
 
@@ -1519,6 +1825,8 @@ window.addEventListener("storage", renderAll);
 window.deleteIncome = deleteIncome;
 window.deleteExpense = deleteExpense;
 window.deleteGoal = deleteGoal;
+window.markIncomeReceived = markIncomeReceived;
+window.markIncomePending = markIncomePending;
 window.markExpensePaid = markExpensePaid;
 window.markExpenseUnpaid = markExpenseUnpaid;
 window.updateExpenseAssignee = updateExpenseAssignee;
