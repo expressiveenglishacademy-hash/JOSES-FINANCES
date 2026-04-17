@@ -133,6 +133,22 @@ function addDaysToDateInput(value, days) {
   return formatDateInput(parsed);
 }
 
+function addMonthsToDateInput(value, months) {
+  const parsed = parseDateValue(value);
+
+  if (!parsed) {
+    return "";
+  }
+
+  const originalDay = parsed.getDate();
+  const target = new Date(parsed.getFullYear(), parsed.getMonth() + months, 1);
+  const lastDayOfMonth = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+
+  target.setDate(Math.min(originalDay, lastDayOfMonth));
+
+  return formatDateInput(target);
+}
+
 function getDaysUntil(value) {
   const parsed = parseDateValue(value);
 
@@ -183,14 +199,22 @@ function normalizeGoals(rawGoals) {
   })).filter((goal) => goal.name && goal.amount > 0);
 }
 
-function normalizeIncomeFrequency(value) {
+function normalizeIncomeFrequency(value, hasExpectedDate = false) {
   const raw = String(value || "").trim().toLowerCase();
 
   if (raw === "bi-weekly" || raw === "biweekly") {
     return "bi-weekly";
   }
 
-  return "one-time";
+  if (raw === "monthly" || raw === "one-time" || raw === "one time" || raw === "onetime") {
+    return "monthly";
+  }
+
+  if (raw === "manual") {
+    return "manual";
+  }
+
+  return hasExpectedDate ? "monthly" : "manual";
 }
 
 function normalizeIncomeStatus(value, hasExpectedDate) {
@@ -211,12 +235,22 @@ function normalizeIncomes(rawIncomes, validIds) {
   return (Array.isArray(rawIncomes) ? rawIncomes : []).map((income) => {
     const id = income.id || createId("income");
     const expectedDate = String(income.expectedDate || income.depositDate || "").trim();
-    const incomeFrequency = normalizeIncomeFrequency(income.incomeFrequency || income.frequency);
-    const incomeStatus = normalizeIncomeStatus(income.incomeStatus || income.status, Boolean(expectedDate));
+    const incomeFrequency = normalizeIncomeFrequency(
+      income.incomeFrequency || income.frequency,
+      Boolean(expectedDate)
+    );
+    const incomeStatus = normalizeIncomeStatus(
+      income.incomeStatus || income.status,
+      Boolean(expectedDate)
+    );
     const createdAt = income.createdAt || income.receivedAt || new Date().toISOString();
     const receivedAt = incomeStatus === "received"
       ? (income.receivedAt || income.createdAt || new Date().toISOString())
       : "";
+    const recurrenceGroupId = String(
+      income.recurrenceGroupId
+      || (incomeFrequency !== "manual" ? `series-${id}` : "")
+    ).trim();
 
     return {
       id,
@@ -228,10 +262,7 @@ function normalizeIncomes(rawIncomes, validIds) {
       incomeStatus,
       receivedAt,
       createdAt,
-      recurrenceGroupId: String(
-        income.recurrenceGroupId
-        || (incomeFrequency === "bi-weekly" ? `series-${id}` : "")
-      ).trim(),
+      recurrenceGroupId,
       generatedFromIncomeId: String(income.generatedFromIncomeId || "").trim()
     };
   }).filter((income) => income.name && income.amount > 0);
@@ -433,7 +464,15 @@ function getExpenseStatusLabel(status) {
 }
 
 function getIncomeFrequencyLabel(income) {
-  return income.incomeFrequency === "bi-weekly" ? "Bi-Weekly" : "One-Time";
+  if (income.incomeFrequency === "bi-weekly") {
+    return "Bi-Weekly";
+  }
+
+  if (income.incomeFrequency === "monthly") {
+    return "Monthly";
+  }
+
+  return "Manual";
 }
 
 function getExpenseKindLabel(expense) {
@@ -746,7 +785,7 @@ function updateIncomeFormState() {
   if (note) {
     note.textContent = frequency === "bi-weekly"
       ? "When you mark a bi-weekly paycheck as received, the next paycheck 14 days later will be scheduled automatically."
-      : "One-time deposits stay scheduled until you manually mark them received.";
+      : "Monthly income keeps repeating every month until you remove the schedule.";
   }
 }
 
@@ -1440,7 +1479,7 @@ function addIncome(event) {
   const personId = String(byId("income-person")?.value || "").trim();
   const name = String(byId("income-name")?.value || "").trim();
   const amount = Number(byId("income-amount")?.value);
-  const incomeFrequency = normalizeIncomeFrequency(byId("income-frequency")?.value || "one-time");
+  const incomeFrequency = normalizeIncomeFrequency(byId("income-frequency")?.value || "monthly", true);
   const expectedDate = String(byId("income-expected-date")?.value || "").trim();
   const data = getData();
 
@@ -1461,7 +1500,7 @@ function addIncome(event) {
     incomeStatus: "pending",
     receivedAt: "",
     createdAt: new Date().toISOString(),
-    recurrenceGroupId: incomeFrequency === "bi-weekly" ? `series-${id}` : "",
+    recurrenceGroupId: `series-${id}`,
     generatedFromIncomeId: ""
   });
 
@@ -1472,19 +1511,25 @@ function addIncome(event) {
   setMessage(
     "income-message",
     incomeFrequency === "bi-weekly"
-      ? "Bi-weekly income scheduled. Mark it received when it hits the bank and the next pay date will be queued automatically."
-      : "Income scheduled successfully. Mark it received when it reaches the bank account.",
+      ? "Bi-weekly income scheduled. Mark it received and the next paycheck will be queued automatically."
+      : "Monthly income scheduled. Mark it received and the next month's deposit will be queued automatically.",
     "success"
   );
   renderAll();
 }
 
-function ensureNextBiWeeklyIncome(data, income) {
-  if (income.incomeFrequency !== "bi-weekly" || !income.expectedDate) {
+function ensureNextRecurringIncome(data, income) {
+  if (!income.expectedDate || income.incomeFrequency === "manual") {
     return;
   }
 
-  const nextExpectedDate = addDaysToDateInput(income.expectedDate, 14);
+  let nextExpectedDate = "";
+
+  if (income.incomeFrequency === "bi-weekly") {
+    nextExpectedDate = addDaysToDateInput(income.expectedDate, 14);
+  } else if (income.incomeFrequency === "monthly") {
+    nextExpectedDate = addMonthsToDateInput(income.expectedDate, 1);
+  }
 
   if (!nextExpectedDate) {
     return;
@@ -1504,7 +1549,7 @@ function ensureNextBiWeeklyIncome(data, income) {
     personId: income.personId,
     name: income.name,
     amount: income.amount,
-    incomeFrequency: "bi-weekly",
+    incomeFrequency: income.incomeFrequency,
     expectedDate: nextExpectedDate,
     incomeStatus: "pending",
     receivedAt: "",
@@ -1524,7 +1569,7 @@ function markIncomeReceived(incomeId) {
 
   income.incomeStatus = "received";
   income.receivedAt = new Date().toISOString();
-  ensureNextBiWeeklyIncome(data, income);
+  ensureNextRecurringIncome(data, income);
   saveData(data);
   renderAll();
 }
@@ -1540,9 +1585,13 @@ function markIncomePending(incomeId) {
   income.incomeStatus = "pending";
   income.receivedAt = "";
 
-  if (income.incomeFrequency === "bi-weekly") {
+  if (income.recurrenceGroupId && income.expectedDate) {
     data.incomes = data.incomes.filter((entry) => {
-      return !(entry.generatedFromIncomeId === income.id && isPendingIncome(entry));
+      return !(
+        entry.recurrenceGroupId === income.recurrenceGroupId
+        && isPendingIncome(entry)
+        && getDateSortValue(entry.expectedDate) > getDateSortValue(income.expectedDate)
+      );
     });
   }
 
