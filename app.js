@@ -71,8 +71,8 @@ function formatCurrency(value) {
 function formatDate(value) {
   const parsed = new Date(value);
 
-  if (Number.isNaN(parsed.getTime())) {
-    return "Unknown date";
+  if (!value || Number.isNaN(parsed.getTime())) {
+    return "No date";
   }
 
   return parsed.toLocaleDateString("en-US", {
@@ -85,7 +85,7 @@ function formatDate(value) {
 function getDaysUntil(value) {
   const parsed = new Date(value);
 
-  if (Number.isNaN(parsed.getTime())) {
+  if (!value || Number.isNaN(parsed.getTime())) {
     return null;
   }
 
@@ -137,6 +137,20 @@ function normalizeIncomes(rawIncomes, validIds) {
   })).filter((income) => income.name && income.amount > 0);
 }
 
+function normalizeExpenseKind(value) {
+  const raw = String(value || "").trim().toLowerCase();
+
+  if (raw === "goal allocation" || raw === "goal-allocation") {
+    return "goal-allocation";
+  }
+
+  if (raw === "fixed") {
+    return "fixed";
+  }
+
+  return "variable";
+}
+
 function resolveGoalReference(expense, goals) {
   const goalId = String(expense.goalId || "").trim();
   const goalName = String(expense.goalName || "").trim();
@@ -160,35 +174,46 @@ function resolveGoalReference(expense, goals) {
 
 function normalizeExpenses(rawExpenses, validIds, goals) {
   return (Array.isArray(rawExpenses) ? rawExpenses : []).map((expense) => {
-    const legacyGoalAllocation = expense.type === "Goal Allocation";
-    const expenseType = expense.expenseType === "goal-allocation" || legacyGoalAllocation
-      ? "goal-allocation"
-      : "regular";
+    const expenseKind = normalizeExpenseKind(
+      expense.expenseKind || expense.expenseType || expense.type
+    );
     const goalRef = resolveGoalReference(expense, goals);
-    const goalName = expenseType === "goal-allocation"
+    const goalName = expenseKind === "goal-allocation"
       ? goalRef.goalName || "Goal"
       : "";
     const name = String(expense.name || "").trim()
-      || (expenseType === "goal-allocation" && goalName ? `Allocation to ${goalName}` : "");
+      || (expenseKind === "goal-allocation" && goalName ? `Allocation to ${goalName}` : "");
+    const dueDate = expenseKind === "goal-allocation"
+      ? ""
+      : String(expense.dueDate || "").trim();
 
     return {
       id: expense.id || createId("expense"),
       personId: normalizePersonId(expense.personId, validIds),
       name,
-      category: expenseType === "goal-allocation"
+      category: expenseKind === "goal-allocation"
         ? "Goals"
         : (String(expense.category || "Other").trim() || "Other"),
       amount: Number(expense.amount) || 0,
       createdAt: expense.createdAt || new Date().toISOString(),
-      expenseType,
-      goalId: expenseType === "goal-allocation" ? goalRef.goalId : "",
+      expenseKind,
+      dueDate,
+      goalId: expenseKind === "goal-allocation" ? goalRef.goalId : "",
       goalName
     };
   }).filter((expense) => expense.name && expense.amount > 0);
 }
 
 function isGoalAllocation(expense) {
-  return expense.expenseType === "goal-allocation";
+  return expense.expenseKind === "goal-allocation";
+}
+
+function isFixedExpense(expense) {
+  return expense.expenseKind === "fixed";
+}
+
+function isVariableExpense(expense) {
+  return expense.expenseKind === "variable";
 }
 
 function getData() {
@@ -384,13 +409,16 @@ function updateExpenseFormState() {
   const goalWrap = byId("expense-goal-wrap");
   const goalSelect = byId("expense-goal-id");
   const categoryInput = byId("expense-category");
+  const dueDateInput = byId("expense-due-date");
   const note = byId("expense-type-note");
 
   if (!typeSelect) {
     return;
   }
 
-  const isAllocation = typeSelect.value === "goal-allocation";
+  const type = typeSelect.value;
+  const isAllocation = type === "goal-allocation";
+  const isFixed = type === "fixed";
 
   if (goalWrap) {
     goalWrap.style.display = isAllocation ? "grid" : "none";
@@ -415,10 +443,23 @@ function updateExpenseFormState() {
     }
   }
 
+  if (dueDateInput) {
+    dueDateInput.required = isFixed;
+    dueDateInput.disabled = isAllocation;
+
+    if (isAllocation) {
+      dueDateInput.value = "";
+    }
+  }
+
   if (note) {
-    note.textContent = isAllocation
-      ? "This entry will count as money allocated to the selected goal and will reduce available funds immediately."
-      : "Regular expenses reduce the payer's available balance and also the household available balance.";
+    if (isAllocation) {
+      note.textContent = "This entry will count as money allocated to the selected goal and will reduce available funds immediately.";
+    } else if (isFixed) {
+      note.textContent = "Fixed expenses require a due date so you can track when the money is expected to go out.";
+    } else {
+      note.textContent = "Variable expenses can also include a due date if you want to track when the money goes out.";
+    }
   }
 }
 
@@ -492,10 +533,18 @@ function buildExpenseMeta(item, data) {
     ].map((value) => `<span>${value}</span>`).join("");
   }
 
+  const kindLabel = isFixedExpense(item) ? "Fixed" : "Variable";
+  const dateLabel = item.dueDate
+    ? `Due ${formatDate(item.dueDate)}`
+    : isFixedExpense(item)
+      ? "No due date"
+      : `Logged ${formatDate(item.createdAt)}`;
+
   return [
     escapeHtml(getPersonName(data, item.personId)),
+    kindLabel,
     escapeHtml(item.category),
-    formatDate(item.createdAt)
+    dateLabel
   ].map((value) => `<span>${value}</span>`).join("");
 }
 
@@ -809,15 +858,26 @@ function renderExpensesPage() {
   const data = getData();
   const totals = calculateTotals(data);
 
+  const fixedTotal = data.expenses.reduce((sum, expense) => {
+    return sum + (isFixedExpense(expense) ? expense.amount : 0);
+  }, 0);
+
+  const variableTotal = data.expenses.reduce((sum, expense) => {
+    return sum + (isVariableExpense(expense) ? expense.amount : 0);
+  }, 0);
+
   setText("expense-household-total", formatCurrency(totals.householdExpenses));
   setText("expense-household-total-hero", formatCurrency(totals.householdExpenses));
   setText("expense-household-available", formatCurrency(totals.householdAvailable));
+  setText("expense-fixed-total", formatCurrency(fixedTotal));
+  setText("expense-variable-total", formatCurrency(variableTotal));
   setText("expense-goal-allocated", formatCurrency(totals.totalGoalAllocated));
   setText("expense-count", `${data.expenses.length} ${data.expenses.length === 1 ? "entry" : "entries"}`);
 
   populatePersonSelect("expense-person", data, "Select who is paying", true);
   populateGoalSelect(data);
   updateExpenseFormState();
+
   setHTML("expense-balance-grid", buildBalanceCards(totals, true));
   setHTML("expense-split-list", buildSummaryList(data, totals, "expense"));
   setHTML("expense-list", buildManageList(
@@ -957,15 +1017,17 @@ function addExpense(event) {
   event.preventDefault();
 
   const personId = String(byId("expense-person")?.value || "").trim();
-  const type = String(byId("expense-type")?.value || "regular").trim();
+  const expenseKind = normalizeExpenseKind(byId("expense-type")?.value || "variable");
   const nameInput = String(byId("expense-name")?.value || "").trim();
   const category = String(byId("expense-category")?.value || "").trim();
   const goalId = String(byId("expense-goal-id")?.value || "").trim();
+  const dueDate = String(byId("expense-due-date")?.value || "").trim();
   const amount = Number(byId("expense-amount")?.value);
   const data = getData();
 
   const validPayer = personId === SHARED_PERSON_ID || data.people.some((person) => person.id === personId);
-  const isAllocation = type === "goal-allocation";
+  const isAllocation = expenseKind === "goal-allocation";
+  const isFixed = expenseKind === "fixed";
 
   if (!validPayer || !Number.isFinite(amount) || amount <= 0) {
     setMessage("expense-message", "Choose who is paying and enter an amount above zero.", "error");
@@ -976,6 +1038,7 @@ function addExpense(event) {
   let finalCategory = category || "Other";
   let linkedGoalId = "";
   let linkedGoalName = "";
+  let finalDueDate = dueDate;
 
   if (isAllocation) {
     const goal = data.goals.find((entry) => entry.id === goalId);
@@ -988,7 +1051,13 @@ function addExpense(event) {
     linkedGoalId = goal.id;
     linkedGoalName = goal.name;
     finalCategory = "Goals";
+    finalDueDate = "";
     name = name || `Allocation to ${goal.name}`;
+  }
+
+  if (isFixed && !finalDueDate) {
+    setMessage("expense-message", "Fixed expenses require a due date.", "error");
+    return;
   }
 
   if (!name) {
@@ -1003,7 +1072,8 @@ function addExpense(event) {
     category: finalCategory,
     amount,
     createdAt: new Date().toISOString(),
-    expenseType: isAllocation ? "goal-allocation" : "regular",
+    expenseKind,
+    dueDate: finalDueDate,
     goalId: linkedGoalId,
     goalName: linkedGoalName
   });
