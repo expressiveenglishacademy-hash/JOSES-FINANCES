@@ -159,7 +159,7 @@
     }
 
     .stats-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       margin-bottom: 24px;
     }
 
@@ -377,10 +377,6 @@
         grid-template-columns: 1fr;
       }
 
-      .stats-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
       .hero-total {
         text-align: left;
       }
@@ -396,10 +392,6 @@
       .card {
         padding: 18px;
         border-radius: 20px;
-      }
-
-      .stats-grid {
-        grid-template-columns: 1fr;
       }
 
       .nav {
@@ -418,7 +410,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>FinanceFlow</h1>
-        <p>Track regular expenses, shared expenses, and money allocated to your goals without losing who paid what.</p>
+        <p>Track fixed expenses, variable expenses, and goal allocations with full control over where the money goes and when it is due.</p>
       </div>
       <nav class="nav">
         <a href="index.html">Dashboard</a>
@@ -431,9 +423,9 @@
 
     <section class="hero">
       <div>
-        <div class="hero-tag">Expense and goal allocations</div>
-        <h2>Send money to a goal from the expenses page and deduct it from available funds instantly.</h2>
-        <p>Choose a normal expense when it is regular spending, or choose <strong>Goal Allocation</strong> when that money is being reserved for one of your goals.</p>
+        <div class="hero-tag">Expense timing and control</div>
+        <h2>Track fixed and variable expenses with due dates.</h2>
+        <p>Use <strong>Fixed Expense</strong> for recurring or planned bills, <strong>Variable Expense</strong> for flexible spending, and <strong>Goal Allocation</strong> when that money is being reserved for one of your goals.</p>
       </div>
       <div class="hero-total">
         <span>Household Expenses</span>
@@ -445,22 +437,31 @@
       <article class="card">
         <div class="stat-label">Household Expenses</div>
         <p class="stat-value" id="expense-household-total">$0.00</p>
-        <p class="stat-meta">Everything that has already been assigned out.</p>
+        <p class="stat-meta">Everything already tracked as money going out.</p>
       </article>
+
       <article class="card">
         <div class="stat-label">Household Available</div>
         <p class="stat-value" id="expense-household-available">$0.00</p>
-        <p class="stat-meta">What is left after expenses and goal allocations.</p>
+        <p class="stat-meta">What remains after expenses and goal allocations.</p>
       </article>
+
+      <article class="card">
+        <div class="stat-label">Fixed Expenses</div>
+        <p class="stat-value" id="expense-fixed-total">$0.00</p>
+        <p class="stat-meta">Bills and planned expenses with a due date.</p>
+      </article>
+
+      <article class="card">
+        <div class="stat-label">Variable Expenses</div>
+        <p class="stat-value" id="expense-variable-total">$0.00</p>
+        <p class="stat-meta">Flexible spending entries you want to track.</p>
+      </article>
+
       <article class="card">
         <div class="stat-label">Allocated To Goals</div>
         <p class="stat-value" id="expense-goal-allocated">$0.00</p>
-        <p class="stat-meta">Money already reserved for your goals from this page.</p>
-      </article>
-      <article class="card">
-        <div class="stat-label">Expense Entries</div>
-        <p class="stat-value" id="expense-count">0 entries</p>
-        <p class="stat-meta">Includes regular expenses and goal allocations.</p>
+        <p class="stat-meta">Money reserved for goals from this page.</p>
       </article>
     </section>
 
@@ -469,7 +470,7 @@
         <h3 class="section-title" style="margin: 0;">Available Balance By Person</h3>
         <span class="badge">Live impact</span>
       </div>
-      <p class="section-copy">A regular expense or a goal allocation will both reduce the payer's available balance immediately.</p>
+      <p class="section-copy">Each expense entry reduces the payer's available balance immediately, while the due date helps you track when it is meant to go out.</p>
       <div id="expense-balance-grid" class="person-grid" style="margin-top: 18px;"></div>
       <p id="expense-legacy-note" class="subtle" style="display: none; margin-top: 18px;"></p>
     </section>
@@ -477,29 +478,34 @@
     <section class="layout">
       <article class="card">
         <h3 class="section-title">Add Expense</h3>
-        <p class="section-copy" style="margin-bottom: 18px;">Use this same form for normal spending or for allocating money to a goal.</p>
+        <p class="section-copy" style="margin-bottom: 18px;">Use the type and due date fields to decide how you want each expense tracked.</p>
         <form id="expense-form" class="form-grid">
           <label>
             Who Is Paying
             <select id="expense-person"></select>
           </label>
+
           <label>
             Entry Type
             <select id="expense-type">
-              <option value="regular">Regular Expense</option>
+              <option value="fixed">Fixed Expense</option>
+              <option value="variable">Variable Expense</option>
               <option value="goal-allocation">Goal Allocation</option>
             </select>
           </label>
+
           <label id="expense-goal-wrap" style="display: none;">
             Goal
             <select id="expense-goal-id">
               <option value="">Select a goal</option>
             </select>
           </label>
+
           <label>
             Name
-            <input id="expense-name" type="text" placeholder="Groceries, rent, vacation fund transfer">
+            <input id="expense-name" type="text" placeholder="Rent, groceries, car payment, vacation fund transfer">
           </label>
+
           <label>
             Category
             <select id="expense-category">
@@ -511,11 +517,19 @@
               <option value="Other">Other</option>
             </select>
           </label>
-          <p class="subtle" id="expense-type-note">Regular expenses reduce the payer's available balance and also the household available balance.</p>
+
+          <label>
+            Due Date
+            <input id="expense-due-date" type="date">
+          </label>
+
+          <p class="subtle" id="expense-type-note">Fixed expenses require a due date so you can track when the money is expected to go out.</p>
+
           <label>
             Amount
             <input id="expense-amount" type="number" min="0" step="0.01" placeholder="0.00">
           </label>
+
           <button class="button" type="submit">Save Entry</button>
           <div id="expense-message" class="message"></div>
         </form>
@@ -534,7 +548,7 @@
 
         <article class="card">
           <h3 class="section-title">Category Breakdown</h3>
-          <p class="section-copy" style="margin-bottom: 18px;">Goal allocations will appear under the <strong>Goals</strong> category in this chart.</p>
+          <p class="section-copy" style="margin-bottom: 18px;">Goal allocations appear under <strong>Goals</strong>. Fixed and variable entries are grouped by category.</p>
           <div class="chart-wrap">
             <canvas id="expense-chart"></canvas>
             <div id="expense-chart-empty" class="chart-empty">Add expenses or goal allocations to generate the category chart.</div>
@@ -546,7 +560,7 @@
     <section class="card" style="margin-top: 18px;">
       <div class="inline-head">
         <h3 class="section-title" style="margin: 0;">Expense History</h3>
-        <span class="badge">Entries</span>
+        <span class="badge" id="expense-count">0 entries</span>
       </div>
       <div id="expense-list" class="list">
         <div class="empty-state">No expenses added yet. Add the first one and assign who is covering it.</div>
