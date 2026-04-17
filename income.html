@@ -466,7 +466,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>FinanceFlow</h1>
-        <p>Schedule expected deposits, flag which jobs are bi-weekly, and only count money toward the household balance after you manually mark it received.</p>
+        <p>Schedule expected deposits, track monthly and bi-weekly pay cycles, and only count money toward the available balance after you manually mark it received.</p>
       </div>
       <nav class="nav">
         <a href="index.html">Dashboard</a>
@@ -481,7 +481,7 @@
       <div>
         <div class="hero-tag">Scheduled income</div>
         <h2>Plan paycheck timing before the money actually hits the bank.</h2>
-        <p>Add each expected deposit with a date, choose one-time or bi-weekly, and manually mark it received when it arrives. Only received deposits increase the available balance.</p>
+        <p>Add each expected deposit with a date, choose monthly or bi-weekly, and manually mark it received when it arrives. Only received deposits increase the available balance.</p>
       </div>
       <div class="hero-total">
         <span>Household Available Balance</span>
@@ -572,7 +572,7 @@
             <label>
               Frequency
               <select id="income-frequency">
-                <option value="one-time">One-Time</option>
+                <option value="monthly">Monthly</option>
                 <option value="bi-weekly">Bi-Weekly</option>
               </select>
             </label>
@@ -582,7 +582,7 @@
               <input id="income-expected-date" type="date">
             </label>
 
-            <p class="subtle" id="income-schedule-note">One-time deposits stay scheduled until you manually mark them received.</p>
+            <p class="subtle" id="income-schedule-note">Monthly income keeps repeating every month until you remove the schedule.</p>
 
             <button class="button" type="submit">Save Income</button>
             <div id="income-message" class="message"></div>
@@ -607,7 +607,7 @@
             <h3 class="section-title" style="margin: 0;">Income Schedule And History</h3>
             <span class="badge" id="income-people-count">2 people</span>
           </div>
-          <p class="section-copy" style="margin-bottom: 18px;">Bi-weekly deposits automatically create the next scheduled paycheck when you mark the current one received.</p>
+          <p class="section-copy" style="margin-bottom: 18px;">Monthly deposits automatically create the next month due date, and bi-weekly deposits automatically queue the next paycheck 14 days later.</p>
           <div id="income-list" class="list">
             <div class="empty-state">No income scheduled yet. Add the first expected deposit to start tracking incoming money.</div>
           </div>
