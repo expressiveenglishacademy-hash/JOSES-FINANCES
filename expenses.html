@@ -58,7 +58,7 @@
     .brand p {
       margin: 8px 0 0;
       color: var(--muted);
-      max-width: 720px;
+      max-width: 760px;
       line-height: 1.6;
     }
 
@@ -132,7 +132,7 @@
 
     .hero-total {
       padding: 18px 22px;
-      min-width: 240px;
+      min-width: 250px;
       border-radius: 22px;
       background: rgba(15, 23, 42, 0.78);
       border: 1px solid rgba(251, 113, 133, 0.18);
@@ -159,7 +159,7 @@
     }
 
     .stats-grid {
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       margin-bottom: 24px;
     }
 
@@ -284,13 +284,14 @@
     .button {
       border: none;
       border-radius: 16px;
-      padding: 14px 18px;
+      padding: 12px 16px;
       background: linear-gradient(135deg, #38bdf8, #0ea5e9);
       color: #02111f;
       font: inherit;
       font-weight: 800;
       cursor: pointer;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
+      white-space: nowrap;
     }
 
     .button:hover {
@@ -298,9 +299,19 @@
       box-shadow: 0 16px 30px rgba(56, 189, 248, 0.26);
     }
 
+    .button-secondary {
+      background: rgba(148, 163, 184, 0.14);
+      color: #e2e8f0;
+      box-shadow: none;
+    }
+
+    .button-success {
+      background: rgba(34, 197, 94, 0.16);
+      color: #bbf7d0;
+      box-shadow: none;
+    }
+
     .button-danger {
-      padding: 10px 14px;
-      border-radius: 14px;
       background: rgba(251, 113, 133, 0.14);
       color: #fda4af;
       box-shadow: none;
@@ -328,6 +339,7 @@
       border-radius: 18px;
       background: rgba(15, 23, 42, 0.78);
       border: 1px solid rgba(148, 163, 184, 0.12);
+      align-items: flex-start;
     }
 
     .list-item strong {
@@ -342,6 +354,61 @@
       flex-wrap: wrap;
       color: var(--muted);
       font-size: 0.9rem;
+    }
+
+    .action-stack {
+      display: grid;
+      gap: 10px;
+      min-width: 260px;
+      justify-items: end;
+    }
+
+    .inline-select {
+      padding: 10px 12px;
+      border-radius: 12px;
+      min-width: 220px;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .status-listed {
+      background: rgba(148, 163, 184, 0.16);
+      color: #cbd5e1;
+    }
+
+    .status-due-soon {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fcd34d;
+    }
+
+    .status-overdue {
+      background: rgba(251, 113, 133, 0.16);
+      color: #fda4af;
+    }
+
+    .status-paid {
+      background: rgba(34, 197, 94, 0.16);
+      color: #86efac;
+    }
+
+    .status-allocated {
+      background: rgba(56, 189, 248, 0.16);
+      color: #bae6fd;
     }
 
     .empty-state {
@@ -394,6 +461,28 @@
         border-radius: 20px;
       }
 
+      .list-item {
+        flex-direction: column;
+      }
+
+      .action-stack {
+        width: 100%;
+        min-width: 0;
+        justify-items: stretch;
+      }
+
+      .inline-select {
+        min-width: 0;
+      }
+
+      .action-row {
+        justify-content: stretch;
+      }
+
+      .action-row .button {
+        flex: 1 1 100%;
+      }
+
       .nav {
         width: 100%;
       }
@@ -410,7 +499,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>FinanceFlow</h1>
-        <p>Track fixed expenses, variable expenses, and goal allocations with full control over where the money goes and when it is due.</p>
+        <p>List expenses first, track which ones are due soon or overdue, manually mark them paid when the money actually leaves, and reassign the person responsible whenever you need to.</p>
       </div>
       <nav class="nav">
         <a href="index.html">Dashboard</a>
@@ -423,45 +512,51 @@
 
     <section class="hero">
       <div>
-        <div class="hero-tag">Expense timing and control</div>
-        <h2>Track fixed and variable expenses with due dates.</h2>
-        <p>Use <strong>Fixed Expense</strong> for recurring or planned bills, <strong>Variable Expense</strong> for flexible spending, and <strong>Goal Allocation</strong> when that money is being reserved for one of your goals.</p>
+        <div class="hero-tag">Manual payment control</div>
+        <h2>Keep bills listed until you decide they have actually been paid.</h2>
+        <p>Fixed and variable expenses now stay in the queue as <strong>Listed</strong>, <strong>Due Soon</strong>, or <strong>Overdue</strong>. They do not reduce available balance until you manually mark them paid. Goal allocations still deduct immediately.</p>
       </div>
       <div class="hero-total">
-        <span>Household Expenses</span>
+        <span>Paid & Allocated Outflow</span>
         <strong id="expense-household-total-hero">$0.00</strong>
       </div>
     </section>
 
     <section class="stats-grid">
       <article class="card">
-        <div class="stat-label">Household Expenses</div>
+        <div class="stat-label">Paid & Allocated</div>
         <p class="stat-value" id="expense-household-total">$0.00</p>
-        <p class="stat-meta">Everything already tracked as money going out.</p>
+        <p class="stat-meta">Money that has already left or been reserved.</p>
       </article>
 
       <article class="card">
         <div class="stat-label">Household Available</div>
         <p class="stat-value" id="expense-household-available">$0.00</p>
-        <p class="stat-meta">What remains after expenses and goal allocations.</p>
+        <p class="stat-meta">Only reflects paid bills and goal allocations.</p>
       </article>
 
       <article class="card">
-        <div class="stat-label">Fixed Expenses</div>
-        <p class="stat-value" id="expense-fixed-total">$0.00</p>
-        <p class="stat-meta">Bills and planned expenses with a due date.</p>
+        <div class="stat-label">Pending Bills</div>
+        <p class="stat-value" id="expense-pending-total">$0.00</p>
+        <p class="stat-meta">Still listed and not deducted yet.</p>
       </article>
 
       <article class="card">
-        <div class="stat-label">Variable Expenses</div>
-        <p class="stat-value" id="expense-variable-total">$0.00</p>
-        <p class="stat-meta">Flexible spending entries you want to track.</p>
+        <div class="stat-label">Due Soon</div>
+        <p class="stat-value" id="expense-due-soon-total">$0.00</p>
+        <p class="stat-meta">Due within the next 7 days.</p>
       </article>
 
       <article class="card">
-        <div class="stat-label">Allocated To Goals</div>
+        <div class="stat-label">Overdue</div>
+        <p class="stat-value" id="expense-overdue-total">$0.00</p>
+        <p class="stat-meta">Bills whose due date already passed.</p>
+      </article>
+
+      <article class="card">
+        <div class="stat-label">Goal Allocated</div>
         <p class="stat-value" id="expense-goal-allocated">$0.00</p>
-        <p class="stat-meta">Money reserved for goals from this page.</p>
+        <p class="stat-meta">Money moved directly into your goals.</p>
       </article>
     </section>
 
@@ -470,7 +565,7 @@
         <h3 class="section-title" style="margin: 0;">Available Balance By Person</h3>
         <span class="badge">Live impact</span>
       </div>
-      <p class="section-copy">Each expense entry reduces the payer's available balance immediately, while the due date helps you track when it is meant to go out.</p>
+      <p class="section-copy">Only paid bills and goal allocations reduce these balances. Pending bills stay visible here as context without deducting yet.</p>
       <div id="expense-balance-grid" class="person-grid" style="margin-top: 18px;"></div>
       <p id="expense-legacy-note" class="subtle" style="display: none; margin-top: 18px;"></p>
     </section>
@@ -478,10 +573,10 @@
     <section class="layout">
       <article class="card">
         <h3 class="section-title">Add Expense</h3>
-        <p class="section-copy" style="margin-bottom: 18px;">Use the type and due date fields to decide how you want each expense tracked.</p>
+        <p class="section-copy" style="margin-bottom: 18px;">New fixed and variable expenses are created as pending. Reassign them anytime, and mark them paid only when the money is actually gone.</p>
         <form id="expense-form" class="form-grid">
           <label>
-            Who Is Paying
+            Assigned To
             <select id="expense-person"></select>
           </label>
 
@@ -503,7 +598,7 @@
 
           <label>
             Name
-            <input id="expense-name" type="text" placeholder="Rent, groceries, car payment, vacation fund transfer">
+            <input id="expense-name" type="text" placeholder="Rent, power bill, groceries, vacation fund transfer">
           </label>
 
           <label>
@@ -523,7 +618,7 @@
             <input id="expense-due-date" type="date">
           </label>
 
-          <p class="subtle" id="expense-type-note">Fixed expenses require a due date so you can track when the money is expected to go out.</p>
+          <p class="subtle" id="expense-type-note">Fixed expenses are listed first and only reduce the available balance after you manually mark them paid.</p>
 
           <label>
             Amount
@@ -538,20 +633,21 @@
       <div class="stack">
         <article class="card">
           <div class="inline-head">
-            <h3 class="section-title" style="margin: 0;">Expenses By Person</h3>
-            <span class="badge">Totals</span>
+            <h3 class="section-title" style="margin: 0;">Paid By Person</h3>
+            <span class="badge">Actual cash out</span>
           </div>
+          <p class="section-copy" style="margin-bottom: 18px;">This section only reflects bills that have already been paid, plus goal allocations.</p>
           <div id="expense-split-list" class="list">
-            <div class="empty-state">No expenses have been recorded yet.</div>
+            <div class="empty-state">No paid expenses have been recorded yet.</div>
           </div>
         </article>
 
         <article class="card">
-          <h3 class="section-title">Category Breakdown</h3>
-          <p class="section-copy" style="margin-bottom: 18px;">Goal allocations appear under <strong>Goals</strong>. Fixed and variable entries are grouped by category.</p>
+          <h3 class="section-title">Paid Category Breakdown</h3>
+          <p class="section-copy" style="margin-bottom: 18px;">Only paid expenses and goal allocations appear in this chart.</p>
           <div class="chart-wrap">
             <canvas id="expense-chart"></canvas>
-            <div id="expense-chart-empty" class="chart-empty">Add expenses or goal allocations to generate the category chart.</div>
+            <div id="expense-chart-empty" class="chart-empty">Mark an expense paid or add a goal allocation to generate the category chart.</div>
           </div>
         </article>
       </div>
@@ -559,11 +655,12 @@
 
     <section class="card" style="margin-top: 18px;">
       <div class="inline-head">
-        <h3 class="section-title" style="margin: 0;">Expense History</h3>
+        <h3 class="section-title" style="margin: 0;">Expense Queue And History</h3>
         <span class="badge" id="expense-count">0 entries</span>
       </div>
+      <p class="section-copy" style="margin-bottom: 18px;">Each item shows whether it is listed, due soon, overdue, paid, or allocated. You can also change who is assigned to pay it.</p>
       <div id="expense-list" class="list">
-        <div class="empty-state">No expenses added yet. Add the first one and assign who is covering it.</div>
+        <div class="empty-state">No expenses added yet. Add the first one and it will stay listed until you mark it paid.</div>
       </div>
     </section>
   </div>
